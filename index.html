@@ -209,6 +209,12 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
         <select id="jenis" required></select>
         <div class="note" id="jenisNote"></div>
       </div>
+      <div class="field" id="vchField" hidden>
+        <label for="vchIn">Kode voucher</label>
+        <input type="text" id="vchIn" autocomplete="off" autocapitalize="characters" placeholder="2611.DE09.001" maxlength="20" disabled>
+        <div class="note" id="vchNote">Kode voucher diperoleh setelah sesi konseling Jajan Curhat. Format: 2611.DE09.001</div>
+        <div class="err" id="vchErr" hidden></div>
+      </div>
       <div class="nominal" id="nom1" hidden><span>Nominal pembayaran</span><b id="nom1v"></b></div>
     </section>
     <!-- Section 2 -->
@@ -394,6 +400,7 @@ function paketList(k){const l=[],hg=k.harga,pr=perReg(k);
   const note=hg.regulerMulai&&todayStr()<hg.regulerMulai?` (dibuka ${tgl(hg.regulerMulai)})`:" (periode berakhir)";
   if(hg.earlybird&&hg.earlybird.nominal!=null){const on=ebAktif(k);l.push({v:"earlybird",label:"Earlybird"+(on?(hg.earlybird.sampai?` (sampai ${tgl(hg.earlybird.sampai)})`:""):belumBuka(k)?` (dibuka ${tgl(hg.regulerMulai)})`:" (periode berakhir)"),nominal:hg.earlybird.nominal,jumlah:1,disabled:!on})}
   if(hg.reguler!=null)l.push({v:"reguler",label:"Reguler"+(pr?"":note),nominal:hg.reguler,jumlah:1,disabled:!pr});
+  if(hg.reguler!=null&&k.id===VCH_UNTUK)l.push({v:"voucher",label:`Voucher ${VCH_DISKON}% (dari harga Reguler)`+(pr?"":note),nominal:Math.round(hg.reguler*(100-VCH_DISKON)/100),jumlah:1,disabled:!pr});
   if(hg.paket)l.push({v:"paket",label:`Paket ${hg.paket.jumlah} peserta`+(pr?"":note),nominal:hg.paket.nominal,jumlah:hg.paket.jumlah,disabled:!pr});
   return l}
 function openForm(id){
@@ -408,7 +415,10 @@ function openForm(id){
 $("#jenis").addEventListener("change",e=>{
   biaya=paketList(K).find(p=>p.v===e.target.value)||null;
   $("#nom1").hidden=!biaya;if(biaya){$("#nom1v").textContent=rp(biaya.nominal);jumlah=biaya.jumlah;
-    $("#jenisNote").textContent=biaya.v==="paket"?`Paket untuk ${jumlah} peserta: kamu akan mengisi ${jumlah} data peserta.`:""}});
+    $("#jenisNote").textContent=biaya.v==="paket"?`Paket untuk ${jumlah} peserta: kamu akan mengisi ${jumlah} data peserta.`:biaya.v==="voucher"?`Harga Reguler ${rp(K.harga.reguler)} dikurangi diskon ${VCH_DISKON}%.`:""}
+  const vf=biaya&&biaya.v==="voucher";$("#vchField").hidden=!vf;$("#vchIn").disabled=!vf;$("#vchIn").required=vf;$("#vchErr").hidden=true;if(!vf)$("#vchIn").value=""});
+const vchRe=()=>new RegExp("^"+VCH_PREFIX.replace(/\./g,"\\.")+"\\.\\d{"+VCH_PAD+"}$");
+const vchNilai=()=>$("#vchIn").value.trim().toUpperCase();
 function show(){
   secs.forEach((s,i)=>$(s).hidden=(i+1!==step));
   [...$("#steps").children].forEach((d,i)=>d.className=i+1===step?"on":i+1<step?"done":"");
@@ -459,7 +469,7 @@ $("#pesertaBox").addEventListener("change",e=>{
 /* section 3 */
 function resume(){
   const names=[...document.querySelectorAll('#pesertaBox input[name$="_nama"]')].map(x=>x.value.trim());
-  $("#resume").innerHTML=[["Kelas",K.nama],["Hari, tanggal",tgl(K.tanggal)+", "+K.jam],["Tempat",K.tempat],["Pembiayaan",biaya.label.replace(/ \(.*\)/,"")],["Peserta",names.join(", ")],["Total pembayaran",rp(biaya.nominal)]]
+  $("#resume").innerHTML=[["Kelas",K.nama],["Hari, tanggal",tgl(K.tanggal)+", "+K.jam],["Tempat",K.tempat],["Pembiayaan",biaya.v==="voucher"?`Voucher ${VCH_DISKON}% · kode ${vchNilai()}`:biaya.label.replace(/ \(.*\)/,"")],["Peserta",names.join(", ")],["Total pembayaran",rp(biaya.nominal)]]
    .map(([a,b])=>`<div><span>${a}</span><b>${esc(b)}</b></div>`).join("")}
 
 function valid(sec){const els=[...$(sec).querySelectorAll("input,select,textarea")].filter(x=>!x.disabled);
@@ -468,6 +478,7 @@ function valid(sec){const els=[...$(sec).querySelectorAll("input,select,textarea
 $("#next").addEventListener("click",()=>{
   if(step===1){
     if(!valid("#s1"))return;
+    if(biaya&&biaya.v==="voucher"&&!vchRe().test(vchNilai())){const e=$("#vchErr");e.textContent="Format kode voucher tidak sesuai. Contoh: "+vchKode(1);e.hidden=false;$("#vchIn").focus();return}
     $("#pesertaBox").innerHTML=Array.from({length:jumlah},(_,i)=>pesertaHTML(i)).join("");
     step=2;show();
   }else if(step===2){
@@ -500,7 +511,7 @@ async function submit(file){
   if(!API_URL){er.textContent="Pendaftaran belum terhubung ke Google Sheet (API_URL belum diisi).";er.hidden=false;return}
   btn.disabled=true;btn.textContent="Mengirim…";
   try{
-    const r=await api({action:"daftar",kode:K.id,kelas:K.nama,tanggal:K.tanggal,pembiayaan:biaya.v,total:biaya.nominal,peserta,bukti:await kompres(file)});
+    const r=await api({action:"daftar",kode:K.id,kelas:K.nama,tanggal:K.tanggal,pembiayaan:biaya.v,voucher:biaya.v==="voucher"?vchNilai():"",total:biaya.nominal,peserta,bukti:await kompres(file)});
     if(!r.ok)throw new Error(r.error||"Gagal menyimpan");
     const msg=`Halo Psychosoul, saya sudah mendaftar kelas "${K.nama}" (${tgl(K.tanggal)}) atas nama ${peserta.map(p=>p.nama).join(", ")}. Total ${rp(biaya.nominal)}. ID pendaftaran: ${r.id}.`;
     $("#waLink").href=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
@@ -566,7 +577,7 @@ const jkS=v=>/^l/i.test(v||"")?"L":/^p/i.test(v||"")?"P":"-";
 const waLink=v=>{const t=String(v||"").replace(/[^\d+]/g,"");if(!t)return"-";const n=t.replace(/^\+/,"").replace(/^0/,"62");return`<a href="https://wa.me/${esc(n)}" target="_blank" rel="noopener">${esc(v)}</a>`};
 const stBayar=r=>{const s=String(r["Status Bayar"]||"").trim().toLowerCase();return s==="sesuai"||s==="lunas"?"ok":s==="tidak sesuai"?"bad":"wait"};
 const stLabel={ok:"Sesuai",bad:"Tidak sesuai",wait:"Belum diverifikasi"};
-const jenisLabel=v=>({earlybird:"Early bird",reguler:"Reguler",paket:"Paket"}[String(v||"").toLowerCase()]||String(v||"-"));
+const jenisLabel=v=>({earlybird:"Early bird",reguler:"Reguler",paket:"Paket",voucher:"Voucher 10%"}[String(v||"").toLowerCase()]||String(v||"-"));
 function payCell(k,r){const st=stBayar(r),nom=Number(r["Peserta ke"])===1?rp(Number(r["Total"])||0):"Paket";
   return`<button type="button" class="pay-btn pay-${st}" data-pay="${esc(konsKey(k,r))}"><b>${nom}</b><small>${esc(jenisLabel(r["Pembiayaan"]))} · ${stLabel[st]}</small></button>`}
 const IC_EYE='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
@@ -642,7 +653,7 @@ function bukaKet(key){
   const kv=[["ID daftar",r["ID Daftar"]],["Kode kelas",r["Kode Kelas"]||kode],["Waktu daftar",w.j?`${w.d} ${w.j}`:w.d],["Nama",r["Nama"]],["Usia",r["Usia"]?r["Usia"]+" tahun":""],
     ["Jenis kelamin",r["Jenis Kelamin"]],["No WhatsApp",r["No WA"]],["Alamat",r["Alamat"]],["Pekerjaan",r["Pekerjaan"]&&r["Pekerjaan"]!=="-"?r["Pekerjaan"]:""],
     ["Jurusan",r["Jurusan"]],["Semester",r["Semester"]],["Tempat pendidikan",r["Tempat Pendidikan"]],["Lama praktik",r["Lama Praktik (thn)"]?r["Lama Praktik (thn)"]+" tahun":""],["Tempat kerja",r["Tempat Kerja"]],
-    ["Pembiayaan",jenisLabel(r["Pembiayaan"])],["Total pembayaran",rp(Number(r["Total"])||0)],["Peserta ke",r["Peserta ke"]],["Status pembayaran",stLabel[st]]];
+    ["Pembiayaan",jenisLabel(r["Pembiayaan"])],["Kode voucher",r["Kode Voucher"]],["Total pembayaran",rp(Number(r["Total"])||0)],["Peserta ke",r["Peserta ke"]],["Status pembayaran",stLabel[st]]];
   $("#ketBody").innerHTML=kv.filter(x=>x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!=="").map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
   $("#ket").showModal()}
 const tglPanjang=s=>s?new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"long",year:"numeric"}).format(new Date(s+"T00:00:00")):"";

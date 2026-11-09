@@ -16,7 +16,7 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -144,6 +144,25 @@ function bukti(d) {
   return { ok: true, mime: b.getContentType(), data: Utilities.base64Encode(b.getBytes()) };
 }
 
+// Voucher diskon: kode = 2611.DE09.NNN, NNN = "No Urut Voucher" peserta Jajan Curhat. Harus dikenal dan belum pernah dipakai.
+const VCH_PREFIX = "2611.DE09", VCH_SUMBER = "C11.3.26.03.1";
+function cekVoucher(ss, sh, kode) {
+  const kv = String(kode || "").trim().toUpperCase(), m = kv.match(/^2611\.DE09\.(\d{3})$/);
+  if (!m) throw new Error("Format kode voucher tidak valid");
+  const src = ss.getSheetByName(VCH_SUMBER);
+  let dikenal = false;
+  if (src && src.getLastRow() > 1) {
+    const v = src.getDataRange().getValues(), c = v[0].indexOf("No Urut Voucher");
+    dikenal = c >= 0 && v.slice(1).some(r => Number(r[c]) === Number(m[1]));
+  }
+  if (!dikenal) throw new Error("Kode voucher tidak dikenali");
+  if (sh.getLastRow() > 1) {
+    const v = sh.getDataRange().getValues(), c = v[0].indexOf("Kode Voucher");
+    if (c >= 0 && v.slice(1).some(r => String(r[c]).toUpperCase() === kv)) throw new Error("Kode voucher sudah digunakan");
+  }
+  return kv;
+}
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
@@ -156,6 +175,7 @@ function daftar(d) {
       sh.appendRow(HEAD); sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, HEAD.length).setFontWeight("bold");
     } else ensureHeader(sh);
+    const kv = String(d.pembiayaan) === "voucher" ? cekVoucher(ss, sh, d.voucher) : "";
     const id = "REG-" + Utilities.formatDate(new Date(), "Asia/Jakarta", "yyMMdd-HHmmss") + "-" + Math.floor(100 + Math.random() * 900);
     let link = "";
     if (d.bukti && d.bukti.data) {
@@ -168,7 +188,7 @@ function daftar(d) {
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
       safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p)));
-    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); });   // lengkapi kolom admin (konseling, voucher) yang kosong
+    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); r[HEAD.indexOf("Kode Voucher")] = kv; });   // lengkapi kolom admin (konseling, voucher) yang kosong
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
