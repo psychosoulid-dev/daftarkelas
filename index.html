@@ -599,8 +599,10 @@ const serahCell=(k,r)=>{const ok=konsSelesai(r),s=String(r["Voucher Diserahkan"]
 const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-kons="${esc(konsKey(k,r))}" title="Catatan${r["Status Konseling"]?": "+esc(r["Status Konseling"]):""}" aria-label="Lihat catatan ${esc(r["Nama"]||"")}">${IC_EYE}${adaPHQrow(r)?`<span>${Number(r["PHQ-4 Total"])}/12</span>`:""}</button>`;
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
-  const cat=pakaiPHQ(k),vk=VCH_KELAS.includes(k.id);
-  return`<table class="ptbl"><thead><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th>${vk?"<th>Diserahkan</th>":""}</tr></thead><tbody>`+
+  const sama=pakaiPHQ(k)||VCH_KELAS.includes(k.id)||k.id===VCH_UNTUK; // Reflektif memakai susunan kolom yang sama dengan Jajan Curhat
+  const cat=sama,vk=sama;
+  const cg=sama?'<colgroup><col style="width:4%"><col style="width:10%"><col style="width:19%"><col style="width:17%"><col style="width:10%"><col style="width:14%"><col style="width:9%"><col style="width:10%"><col style="width:7%"></colgroup>':"";
+  return`<table class="ptbl" ${sama?'style="table-layout:fixed"':""}>${cg}<thead><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th>${vk?"<th>Diserahkan</th>":""}</tr></thead><tbody>`+
   rows.map((r,i)=>{const w=pecahWaktu(r["Waktu"]);
    return`<tr><td>${i+1}</td><td><span class="m">${esc(w.d)}</span><span class="fn">${esc(w.j)}</span></td>
    <td><span class="m">${A(r,"Nama")}</span><span class="fn">${esc(String(r["Usia"]||"-"))} th / ${jkS(r["Jenis Kelamin"])}</span></td>
