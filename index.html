@@ -289,7 +289,7 @@ function renderList(){
     <div class="pills"><span class="tag">${k.sasaran==="umum"?"Umum":esc(k.targetTxt||"Tematik")}</span><span class="tag st-${s}">${STATUS[s]}</span></div></div>
    <div class="jadwal">${hariList(k)}${!k.tanggal&&k.jam==="Soon"?"":`<span class="fn">${esc(jamTxt(k.jam))}</span>`}<span class="val" style="display:block;margin-top:8px">${esc(k.tempat)}</span></div>
    <hr class="sep">
-   <div class="biaya">${biayaHTML(k)}</div>
+   ${s==="soon"?"":`<div class="biaya">${biayaHTML(k)}</div>`}
    <div class="act">${actBtn(k,s)}</div></li>`}).join(""):`<li class="empty">${emptyMsg()}</li>`}
 // kelas lebih dari satu hari: tanggal mulai diakhiri " -", tanggal akhir wrap di baris bawah
 const bisaDaftar=k=>!!k.tanggal&&paketList(k).some(p=>!p.disabled);
