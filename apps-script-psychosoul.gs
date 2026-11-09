@@ -16,7 +16,7 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor"];   // 2 kolom terakhir diisi admin lewat halaman admin   // 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -70,10 +70,14 @@ function konseling(d) {
     if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
     ensureHeader(sh);
     const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
-    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor");
+    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor"), cS = h.indexOf("Status Konseling");
+    const st = String(d.status || "");
+    if (["", "Selesai", "Eskalasi", "Risiko tinggi"].indexOf(st) < 0) throw new Error("Status konseling tidak valid");
     for (let i = 1; i < v.length; i++) {
       if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
-        sh.getRange(i + 1, cH + 1, 1, 2).setValues([[safe(String(d.hasil || "").slice(0, 3000)), safe(String(d.konselor || "").slice(0, 120))]]);
+        sh.getRange(i + 1, cH + 1).setValue(safe(String(d.hasil || "").slice(0, 3000)));
+        sh.getRange(i + 1, cN + 1).setValue(safe(String(d.konselor || "").slice(0, 120)));
+        sh.getRange(i + 1, cS + 1).setValue(st);
         return { ok: true };
       }
     }
@@ -134,7 +138,7 @@ function daftar(d) {
     const rows = d.peserta.map((p, i) => [now, id, kode, safe(d.kelas), safe(d.pembiayaan), Number(d.total) || 0, i + 1,
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
-      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p), ["", ""]));
+      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p), ["", "", ""]));
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
