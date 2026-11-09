@@ -437,6 +437,24 @@ async function submit(file){
   finally{btn.disabled=false;btn.textContent="Kirim pendaftaran"}}
 
 /* ===== Admin: klik logo ===== */
+/*DEMO_START - data dummy simulasi admin. HAPUS blok ini sampai DEMO_END (dan 2 baris bertanda DEMO) bila sudah selesai */
+const DEMO_PIN="demo";
+const DEMO_DATA=(()=>{
+  const bk="https://example.com/bukti-dummy.jpg",J="C11.3.26.03.1",R="C11.3.26.03.2";
+  const row=(kode,kelas,id,pemb,total,ke,w,nama,usia,jk,wa,alamat,st,bukti)=>({"Waktu":w,"ID Daftar":id,"Kode Kelas":kode,"Kelas":kelas,"Pembiayaan":pemb,"Total":total,"Peserta ke":ke,"Nama":nama,"Usia":usia,"Jenis Kelamin":jk,"No WA":wa,"Alamat":alamat,"Pekerjaan":"-","Jurusan":"","Semester":"","Tempat Pendidikan":"","Lama Praktik (thn)":"","Tempat Kerja":"","Bukti Bayar":bukti,"Status Bayar":st});
+  const jc="Jajan Curhat : Take a break, Let your mind awake",rf="Rreflektif & Creative Journaling";
+  return{
+    [J]:[
+      row(J,jc,"REG-261109-081200-101","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
+      row(J,jc,"REG-261109-084500-102","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
+      row(J,jc,"REG-261109-091000-103","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Menunggu verifikasi",bk),
+      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)],
+    [R]:[
+      row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
+      row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
+      row(R,rf,"REG-261109-090500-202","paket",357000,2,"09 Nov 2026 09:05","Gita Safitri (DUMMY)",29,"Perempuan","081200000007","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
+      row(R,rf,"REG-261109-090500-202","paket",357000,3,"09 Nov 2026 09:05","Hendra Wijaya (DUMMY)",31,"Laki-laki","081200000008","Kotagede, Yogyakarta","Menunggu verifikasi",bk)]}})();
+/*DEMO_END*/
 let adminPin=null,adminData={},adminOn=false;const openAcc=new Set();
 function setAdmin(on){adminOn=on;$("#scroll").hidden=on;$("#adminScroll").hidden=!on;$("#filters").hidden=on;
   document.title=on?"Admin – Psychosoul":"Daftar Kelas – Layanan Psikologi Psychosoul";if(on)renderAdmin();else adminPin=null}
@@ -445,6 +463,7 @@ $("#logoBtn").addEventListener("click",logoClick);
 $("#logoBtn").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();logoClick()}});
 $("#pinX").addEventListener("click",()=>$("#pin").close());$("#pinCancel").addEventListener("click",()=>$("#pin").close());
 async function muatAdmin(pin){
+  if(typeof DEMO_PIN!=="undefined"&&pin===DEMO_PIN){adminPin=pin;adminData=DEMO_DATA;return} // DEMO
   if(!API_URL)throw new Error("API_URL belum diisi");
   const r=await api({action:"admin",pin});if(!r.ok)throw new Error(r.error||"Gagal");
   adminPin=pin;adminData=r.data||{}}
@@ -466,7 +485,7 @@ function tabelPeserta(rows){
    <td>${String(r["Bukti Bayar"]||"").startsWith("https://")?`<a href="${esc(r["Bukti Bayar"])}" target="_blank" rel="noopener">Lihat</a>`:"-"}</td><td>${A(r,"Status Bayar")}</td><td>${A(r,"Waktu")}</td></tr>`).join("")+"</tbody></table>"}
 function renderAdmin(){
   const on=kelas.filter(k=>status(k)==="ongoing").sort((a,b)=>(a.tanggal||"9").localeCompare(b.tanggal||"9"));
-  $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
+  $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going${adminPin==="demo"?` <span class="badge">MODE DEMO · data dummy</span>`:""}</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
    <div class="adm-act"><button type="button" class="btn ghost" id="admRefresh">Muat ulang</button><button type="button" class="btn ghost" id="admExit">Keluar</button></div></div>`+
   (on.length?on.map(k=>{const rows=adminData[k.id]||[];
     return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span></summary><div class="acc-b">${tabelPeserta(rows)}</div></details>`}).join("")
