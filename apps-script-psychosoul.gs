@@ -29,6 +29,8 @@ function doPost(e) {
     if (d.action === "daftar") return out(daftar(d));
     if (d.action === "admin") return out(admin(d));
     if (d.action === "konseling") return out(konseling(d));
+    if (d.action === "verifikasi") return out(verifikasi(d));
+    if (d.action === "bukti") return out(bukti(d));
     return out({ ok: false, error: "Aksi tidak dikenal" });
   } catch (err) { return out({ ok: false, error: String(err.message || err) }); }
 }
@@ -79,6 +81,36 @@ function konseling(d) {
   } finally { lock.releaseLock(); }
 }
 
+// Admin menandai bukti bayar "Sesuai" / "Tidak sesuai" untuk satu pendaftaran (semua baris dengan ID Daftar yang sama)
+function verifikasi(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const status = d.status === "Sesuai" ? "Sesuai" : d.status === "Tidak sesuai" ? "Tidak sesuai" : null;
+  if (!status) return { ok: false, error: "Status tidak valid" };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(String(d.kode || ""));
+    if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
+    const v = sh.getDataRange().getValues(), h = v[0], cId = h.indexOf("ID Daftar"), cS = h.indexOf("Status Bayar");
+    let n = 0;
+    for (let i = 1; i < v.length; i++) if (String(v[i][cId]) === String(d.id)) { sh.getRange(i + 1, cS + 1).setValue(status); n++; }
+    if (!n) throw new Error("Data pendaftaran tidak ditemukan");
+    return { ok: true, updated: n };
+  } finally { lock.releaseLock(); }
+}
+
+// Ambil gambar bukti bayar dari Drive (hanya file di folder bukti) dan kirim sebagai base64 agar bisa tampil di halaman admin
+function bukti(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const id = String(d.id || "");
+  if (!/^[\w-]{10,}$/.test(id)) return { ok: false, error: "ID file tidak valid" };
+  const f = DriveApp.getFileById(id), par = f.getParents();
+  let dalamFolder = false;
+  while (par.hasNext()) if (par.next().getName() === FOLDER_NAME) dalamFolder = true;
+  if (!dalamFolder) return { ok: false, error: "File bukan bukti pembayaran" };
+  const b = f.getBlob();
+  return { ok: true, mime: b.getContentType(), data: Utilities.base64Encode(b.getBytes()) };
+}
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
@@ -117,7 +149,7 @@ function admin(d) {
     const v = sh.getDataRange().getValues(), h = v.shift();
     data[sh.getName()] = v.map(r => {
       const o = {}; h.forEach((k, i) => o[k] = r[i] instanceof Date
-        ? Utilities.formatDate(r[i], "Asia/Jakarta", "dd MMM yyyy HH:mm") : r[i]);
+        ? Utilities.formatDate(r[i], "Asia/Jakarta", "dd/MM/yyyy HH:mm") : r[i]);
       return o;
     });
   });
