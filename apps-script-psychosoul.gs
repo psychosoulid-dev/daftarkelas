@@ -16,78 +16,12 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Token","Voucher Scan","Voucher Dipakai","Kode Voucher"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
 
 function doGet() { return out({ ok: true, msg: "Psychosoul API aktif" }); }
-
-// ===== Voucher diskon lewat QR =====
-// Voucher diterbitkan di sheet kelas "asal" (peserta berstatus konseling Selesai) dan dipakai di kelas "tujuan".
-// QR berisi link ?v=<no urut>-<token>. Token acak mencegah orang menebak kode urut.
-const VCH = { prefix: "2611.DE09", pad: 3, asal: "C11.3.26.03.1", tujuan: "C11.3.26.03.2", diskon: 10 };
-const kodeVoucher = no => VCH.prefix + "." + String(no).padStart(VCH.pad, "0");
-function acak(n) {
-  const c = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s = "";
-  for (let i = 0; i < n; i++) s += c.charAt(Math.floor(Math.random() * c.length));
-  return s;
-}
-// Beri nomor urut + token ke satu baris, hanya sekali dan hanya bila status konseling "Selesai"; setelah itu tidak berubah.
-function terbit(sh, v, i) {
-  const h = v[0], cS = h.indexOf("Status Konseling"), cV = h.indexOf("No Urut Voucher"), cT = h.indexOf("Voucher Token");
-  let no = Number(v[i][cV]) || 0, tok = String(v[i][cT] || "");
-  if (String(v[i][cS]) !== "Selesai") return { no: no || "", token: tok };
-  if (!no) { no = v.slice(1).reduce((m, r) => Math.max(m, Number(r[cV]) || 0), 0) + 1; sh.getRange(i + 1, cV + 1).setValue(no); v[i][cV] = no; }
-  if (!tok) { tok = acak(6); sh.getRange(i + 1, cT + 1).setValue(tok); v[i][cT] = tok; }
-  return { no: no, token: tok };
-}
-function cariVoucher(no, token) {
-  const n = Number(no), t = String(token || "");
-  if (!n || !t) return null;
-  const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(VCH.asal);
-  if (!sh || sh.getLastRow() < 2) return null;
-  ensureHeader(sh);
-  const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0], c = k => h.indexOf(k);
-  for (let i = 1; i < v.length; i++) {
-    if (Number(v[i][c("No Urut Voucher")]) !== n) continue;
-    if (String(v[i][c("Voucher Token")]) !== t || String(v[i][c("Status Konseling")]) !== "Selesai") return null;
-    return { sh: sh, v: v, i: i, c: c };
-  }
-  return null;
-}
-// Publik: dipanggil saat QR dibuka. Memeriksa voucher dan menandai "sudah di-scan".
-function voucherCek(d) {
-  const lock = LockService.getScriptLock(); lock.waitLock(20000);
-  try {
-    const vc = cariVoucher(d.no, d.t);
-    if (!vc) { Utilities.sleep(700); return { ok: true, valid: false, alasan: "Voucher tidak valid" }; }
-    const cS = vc.c("Voucher Scan"), dipakai = !!vc.v[vc.i][vc.c("Voucher Dipakai")];
-    if (!vc.v[vc.i][cS]) vc.sh.getRange(vc.i + 1, cS + 1).setValue(new Date());
-    return { ok: true, valid: !dipakai, alasan: dipakai ? "Voucher sudah dipakai" : "", diskon: VCH.diskon, tujuan: VCH.tujuan,
-      kode: kodeVoucher(d.no), nama: String(vc.v[vc.i][vc.c("Nama")] || "").split(" ")[0] };
-  } finally { lock.releaseLock(); }
-}
-// Admin: terbitkan (atau ambil) nomor + token untuk peserta yang konselingnya sudah Selesai.
-function voucherTerbit(d) {
-  const err = cekPin(d); if (err) return { ok: false, error: err };
-  const lock = LockService.getScriptLock(); lock.waitLock(20000);
-  try {
-    const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(String(d.kode || ""));
-    if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
-    ensureHeader(sh);
-    const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
-    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cS = h.indexOf("Status Konseling");
-    for (let i = 1; i < v.length; i++) {
-      if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
-        if (String(v[i][cS]) !== "Selesai") throw new Error("Konseling belum berstatus Selesai");
-        const t = terbit(sh, v, i);
-        return { ok: true, no: t.no, token: t.token };
-      }
-    }
-    throw new Error("Data peserta tidak ditemukan");
-  } finally { lock.releaseLock(); }
-}
 
 function doPost(e) {
   try {
@@ -97,8 +31,6 @@ function doPost(e) {
     if (d.action === "konseling") return out(konseling(d));
     if (d.action === "verifikasi") return out(verifikasi(d));
     if (d.action === "bukti") return out(bukti(d));
-    if (d.action === "voucher_cek") return out(voucherCek(d));
-    if (d.action === "voucher_terbit") return out(voucherTerbit(d));
     return out({ ok: false, error: "Aksi tidak dikenal" });
   } catch (err) { return out({ ok: false, error: String(err.message || err) }); }
 }
@@ -146,9 +78,13 @@ function konseling(d) {
         sh.getRange(i + 1, cH + 1).setValue(safe(String(d.hasil || "").slice(0, 3000)));
         sh.getRange(i + 1, cN + 1).setValue(safe(String(d.konselor || "").slice(0, 120)));
         sh.getRange(i + 1, cS + 1).setValue(st);
-        v[i][cS] = st;
-        const t = terbit(sh, v, i);   // nomor urut + token voucher: diberikan sekali saat status jadi "Selesai"
-        return { ok: true, no: t.no, token: t.token };
+        // No urut voucher = urutan konseling selesai; diberikan sekali saat status jadi "Selesai" lalu tidak berubah
+        let no = Number(v[i][cV]) || 0;
+        if (st === "Selesai" && !no) {
+          no = v.slice(1).reduce((m, r) => Math.max(m, Number(r[cV]) || 0), 0) + 1;
+          sh.getRange(i + 1, cV + 1).setValue(no);
+        }
+        return { ok: true, no: no || "" };
       }
     }
     throw new Error("Data peserta tidak ditemukan");
@@ -197,13 +133,6 @@ function daftar(d) {
       sh.appendRow(HEAD); sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, HEAD.length).setFontWeight("bold");
     } else ensureHeader(sh);
-    let vch = null;                                         // voucher diskon (hanya untuk kelas tujuan, sekali pakai)
-    if (d.voucher && d.voucher.no) {
-      if (kode !== VCH.tujuan) throw new Error("Voucher tidak berlaku untuk kelas ini");
-      vch = cariVoucher(d.voucher.no, d.voucher.t);
-      if (!vch) throw new Error("Voucher tidak valid");
-      if (vch.v[vch.i][vch.c("Voucher Dipakai")]) throw new Error("Voucher sudah dipakai");
-    }
     const id = "REG-" + Utilities.formatDate(new Date(), "Asia/Jakarta", "yyMMdd-HHmmss") + "-" + Math.floor(100 + Math.random() * 900);
     let link = "";
     if (d.bukti && d.bukti.data) {
@@ -215,11 +144,9 @@ function daftar(d) {
     const rows = d.peserta.map((p, i) => [now, id, kode, safe(d.kelas), safe(d.pembiayaan), Number(d.total) || 0, i + 1,
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
-      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p)));
-    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); if (vch) r[HEAD.indexOf("Kode Voucher")] = kodeVoucher(d.voucher.no); });
+      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p), ["", "", ""]));
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
-    if (vch) vch.sh.getRange(vch.i + 1, vch.c("Voucher Dipakai") + 1).setValue(id);   // voucher terpakai
     return { ok: true, id: id };
   } finally { lock.releaseLock(); }
 }
