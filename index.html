@@ -137,6 +137,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .pay-ok,.pay-ok small{color:#1B7F3B}.pay-bad,.pay-bad small{color:#C62828}.pay-wait small{color:var(--muted)}
 .bukti-box{background:var(--bg);border-radius:12px;min-height:160px;display:grid;place-items:center;overflow:hidden;margin:8px 0 12px}.bukti-box img{max-width:100%;max-height:52vh;display:block}
 .btn.setuju{background:#1B7F3B}.btn.setuju:hover{background:#14652E}.btn.bad{background:#fff;color:#C62828;border:1px solid #C62828}.btn.bad:hover{background:#FDECEA}
+.serah{display:flex;align-items:center;justify-content:center}.serah-ck{width:20px;height:20px;accent-color:var(--teal);cursor:pointer;margin:0}.serah-ck:disabled{cursor:not-allowed;opacity:.4}
 .ptbl{border-collapse:collapse;width:100%;font-size:.85rem;min-width:720px}.ptbl th,.ptbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ptbl th{color:var(--muted);font-weight:600;white-space:nowrap}
 </style>
 </head>
@@ -519,7 +520,7 @@ const DEMO_DATA=(()=>{
       row(J,jc,"REG-261109-081200-101","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
       row(J,jc,"REG-261109-084500-102","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
       row(J,jc,"REG-261109-091000-103","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Tidak sesuai",bk),
-      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Selesai","No Urut Voucher":1}:i===1?{"Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi","Status Konseling":"Eskalasi"}:i===2?{"Hasil Konseling":"Contoh: skor tinggi, segera dirujuk.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Risiko tinggi"}:{})}}),
+      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Selesai","No Urut Voucher":1,"Voucher Diserahkan":"09 Nov 2026, 21.05"}:i===1?{"Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi","Status Konseling":"Eskalasi"}:i===2?{"Hasil Konseling":"Contoh: skor tinggi, segera dirujuk.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Risiko tinggi"}:{})}}),
     [R]:[
       row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
       row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
@@ -579,17 +580,19 @@ const VCH_PREFIX="2611.DE09";               // kode voucher = PREFIX.NO_URUT
 const VCH_PAD=3;                            // 001, 002, ...
 const vchKode=no=>VCH_PREFIX+"."+String(no).padStart(VCH_PAD,"0");
 const ketCell=(k,r)=>`<button type="button" class="ic-btn" data-ket="${esc(konsKey(k,r))}">${IC_DOC} ${VCH_KELAS.includes(k.id)?"Voucher":"Lihat isi"}</button>`;
+const serahCell=(k,r)=>{const ok=konsSelesai(r),s=String(r["Voucher Diserahkan"]||"");
+  return`<label class="serah" title="${ok?(s?"Diserahkan "+esc(s):"Belum diserahkan"):"Tersedia setelah konseling berstatus Selesai"}"><input type="checkbox" class="serah-ck" data-serah="${esc(konsKey(k,r))}" ${s?"checked":""} ${ok?"":"disabled"} aria-label="Voucher sudah diserahkan"></label>`};
 const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-kons="${esc(konsKey(k,r))}" title="Catatan${r["Status Konseling"]?": "+esc(r["Status Konseling"]):""}" aria-label="Lihat catatan ${esc(r["Nama"]||"")}">${IC_EYE}${adaPHQrow(r)?`<span>${Number(r["PHQ-4 Total"])}/12</span>`:""}</button>`;
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
-  const cat=pakaiPHQ(k);
-  return`<table class="ptbl"><thead><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th></tr></thead><tbody>`+
+  const cat=pakaiPHQ(k),vk=VCH_KELAS.includes(k.id);
+  return`<table class="ptbl"><thead><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th>${vk?"<th>Diserahkan</th>":""}</tr></thead><tbody>`+
   rows.map((r,i)=>{const w=pecahWaktu(r["Waktu"]);
    return`<tr><td>${i+1}</td><td><span class="m">${esc(w.d)}</span><span class="fn">${esc(w.j)}</span></td>
    <td><span class="m">${A(r,"Nama")}</span><span class="fn">${esc(String(r["Usia"]||"-"))} th / ${jkS(r["Jenis Kelamin"])}</span></td>
    <td>${A(r,"Alamat")}<span class="fn">${waLink(r["No WA"])}</span></td>
    <td><span class="m">${A(r,"Pekerjaan")}</span><span class="fn">${detailPeserta(r)}</span></td>
-   <td>${payCell(k,r)}</td>${cat?`<td>${catCell(k,r)}</td>`:""}<td>${ketCell(k,r)}</td></tr>`}).join("")+"</tbody></table>"}
+   <td>${payCell(k,r)}</td>${cat?`<td>${catCell(k,r)}</td>`:""}<td>${ketCell(k,r)}</td>${vk?`<td>${serahCell(k,r)}</td>`:""}</tr>`}).join("")+"</tbody></table>"}
 function renderAdmin(){
   const on=kelas.filter(k=>status(k)==="ongoing").sort((a,b)=>(a.tanggal||"9").localeCompare(b.tanggal||"9"));
   $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going${adminPin==="demo"?` <span class="badge">MODE DEMO · data dummy</span>`:""}</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
@@ -681,6 +684,15 @@ async function bukaVoucher(kode,r){
   const nt=document.createElement("div");nt.className="note";nt.textContent="Nomor urut ("+no+") = urutan konseling yang selesai. Nomor tetap dan tidak berubah.";$("#vchBox").appendChild(nt);
   const dl=$("#ketDl");dl.hidden=false;dl.onclick=()=>{const a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="voucher-"+vk+".png";document.body.appendChild(a);a.click();a.remove()}}
 $("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-ket]");if(b)bukaKet(b.dataset.ket)});
+$("#adminMain").addEventListener("change",async e=>{const c=e.target.closest(".serah-ck");if(!c)return;
+  const [kode,id,ke]=c.dataset.serah.split("|"),r=(adminData[kode]||[]).find(x=>String(x["ID Daftar"])===id&&String(x["Peserta ke"])===ke),on=c.checked;
+  if(!r){c.checked=!on;return}
+  c.disabled=true;
+  try{let w=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(new Date());
+    if(adminPin!==DEMO_PIN){const res=await api({action:"voucher_serah",pin:adminPin,kode,id,ke,serah:on});if(!res.ok)throw new Error(res.error||"Gagal menyimpan");w=res.waktu||w}
+    r["Voucher Diserahkan"]=on?w:""}
+  catch(err){c.checked=!on;alert("Gagal menyimpan: "+err.message)}
+  finally{renderAdmin()}});
 $("#ketX").addEventListener("click",()=>$("#ket").close());$("#ketCancel").addEventListener("click",()=>$("#ket").close());
 let konsRow=null,konsKode=null;
 function bukaKons(key){

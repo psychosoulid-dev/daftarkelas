@@ -16,7 +16,7 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -29,6 +29,7 @@ function doPost(e) {
     if (d.action === "daftar") return out(daftar(d));
     if (d.action === "admin") return out(admin(d));
     if (d.action === "konseling") return out(konseling(d));
+    if (d.action === "voucher_serah") return out(voucherSerah(d));
     if (d.action === "verifikasi") return out(verifikasi(d));
     if (d.action === "bukti") return out(bukti(d));
     return out({ ok: false, error: "Aksi tidak dikenal" });
@@ -91,6 +92,28 @@ function konseling(d) {
   } finally { lock.releaseLock(); }
 }
 
+// Admin menandai voucher sudah/belum diserahkan ke peserta (hanya bila konseling berstatus Selesai)
+function voucherSerah(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(String(d.kode || ""));
+    if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
+    ensureHeader(sh);
+    const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
+    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cS = h.indexOf("Status Konseling"), cD = h.indexOf("Voucher Diserahkan");
+    for (let i = 1; i < v.length; i++) {
+      if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
+        if (d.serah && String(v[i][cS]) !== "Selesai") throw new Error("Konseling belum berstatus Selesai");
+        const w = d.serah ? Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy, HH.mm") : "";
+        sh.getRange(i + 1, cD + 1).setValue(w);
+        return { ok: true, waktu: w };
+      }
+    }
+    throw new Error("Data peserta tidak ditemukan");
+  } finally { lock.releaseLock(); }
+}
+
 // Admin menandai bukti bayar "Sesuai" / "Tidak sesuai" untuk satu pendaftaran (semua baris dengan ID Daftar yang sama)
 function verifikasi(d) {
   const err = cekPin(d); if (err) return { ok: false, error: err };
@@ -144,7 +167,8 @@ function daftar(d) {
     const rows = d.peserta.map((p, i) => [now, id, kode, safe(d.kelas), safe(d.pembiayaan), Number(d.total) || 0, i + 1,
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
-      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p), ["", "", ""]));
+      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p)));
+    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); });   // lengkapi kolom admin (konseling, voucher) yang kosong
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
