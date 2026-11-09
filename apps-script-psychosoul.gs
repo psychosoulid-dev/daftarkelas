@@ -12,11 +12,15 @@
  */
 const SS_ID = "1bZ_5Rs7glTHjgFuXwwBUizl5IbJtFka-ggCDHIli38A";
 const FOLDER_NAME = "Bukti Pembayaran Psychosoul";
+const FOLDER_SMART = "Dokumen SMART Goal Psychosoul";
+const VCH_SEMUA = "C11.3.26.03.2";   // kelas Reflektif (C11.3.26.03.2): voucher 10% semua kelas, tanpa syarat status konseling
+const SMART_MAX_B64 = 7 * 1024 * 1024;                  // batas ~5 MB file (base64 lebih besar)
+const SMART_MIME = {pdf: "application/pdf", doc: "application/msword", docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png"};
 const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Peserta ke","Nama","Usia",
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher","Dokumen SMART Goal"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -32,8 +36,33 @@ function doPost(e) {
     if (d.action === "voucher_serah") return out(voucherSerah(d));
     if (d.action === "verifikasi") return out(verifikasi(d));
     if (d.action === "bukti") return out(bukti(d));
+    if (d.action === "smartfile") return out(smartfile(d));
     return out({ ok: false, error: "Aksi tidak dikenal" });
   } catch (err) { return out({ ok: false, error: String(err.message || err) }); }
+}
+
+function folderSmart() {
+  const it = DriveApp.getFoldersByName(FOLDER_SMART);
+  return it.hasNext() ? it.next() : DriveApp.createFolder(FOLDER_SMART);
+}
+
+// Ambil dokumen SMART Goal (dilindungi PIN) untuk preview/download di halaman admin
+function smartfile(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(String(d.kode || ""));
+  if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
+  const v = sh.getDataRange().getValues(), h = v[0];
+  const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cSG = h.indexOf("Dokumen SMART Goal");
+  if (cSG < 0) throw new Error("Belum ada dokumen SMART Goal");
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
+      const m = String(v[i][cSG] || "").match(/[-\w]{25,}/);
+      if (!m) throw new Error("Belum ada dokumen SMART Goal");
+      const f = DriveApp.getFileById(m[0]), blob = f.getBlob();
+      return { ok: true, name: f.getName().replace(/^[^_]*_/, ""), mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()) };
+    }
+  }
+  throw new Error("Data peserta tidak ditemukan");
 }
 
 function folder() {
@@ -71,21 +100,31 @@ function konseling(d) {
     if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
     ensureHeader(sh);
     const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
-    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor"), cS = h.indexOf("Status Konseling"), cV = h.indexOf("No Urut Voucher");
+    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor"), cS = h.indexOf("Status Konseling"), cV = h.indexOf("No Urut Voucher"), cSG = h.indexOf("Dokumen SMART Goal");
     const st = String(d.status || "");
     if (["", "Selesai", "Eskalasi", "Risiko tinggi"].indexOf(st) < 0) throw new Error("Status konseling tidak valid");
     for (let i = 1; i < v.length; i++) {
       if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
         sh.getRange(i + 1, cH + 1).setValue(safe(String(d.hasil || "").slice(0, 3000)));
         sh.getRange(i + 1, cN + 1).setValue(safe(String(d.konselor || "").slice(0, 120)));
-        sh.getRange(i + 1, cS + 1).setValue(st);
+        sh.getRange(i + 1, cS + 1).setValue(st);            // status kosong = draft: isian tetap tersimpan
+        let linkSG = String(v[i][cSG] || "");
+        if (d.smart && d.smart.data) {
+          const nm = String(d.smart.name || "smart-goal").replace(/[\\\/:*?"<>|]/g, "_").slice(0, 80);
+          const ext = (nm.split(".").pop() || "").toLowerCase();
+          if (!SMART_MIME[ext]) throw new Error("Format dokumen harus PDF, Word, JPG, atau PNG");
+          if (String(d.smart.data).length > SMART_MAX_B64) throw new Error("Ukuran dokumen melebihi 5 MB");
+          const blob = Utilities.newBlob(Utilities.base64Decode(d.smart.data), SMART_MIME[ext], String(d.id) + "_" + nm);
+          linkSG = folderSmart().createFile(blob).getUrl();
+          sh.getRange(i + 1, cSG + 1).setValue(linkSG);
+        }
         // No urut voucher = urutan sesi konseling selesai; diberikan sekali saat status catatan pertama kali diisi, lalu tidak berubah
         let no = Number(v[i][cV]) || 0;
         if (st && !no) {   // status follow-up apa pun = sesi selesai
           no = v.slice(1).reduce((m, r) => Math.max(m, Number(r[cV]) || 0), 0) + 1;
           sh.getRange(i + 1, cV + 1).setValue(no);
         }
-        return { ok: true, no: no || "" };
+        return { ok: true, no: no || "", smart: linkSG };
       }
     }
     throw new Error("Data peserta tidak ditemukan");
@@ -104,7 +143,7 @@ function voucherSerah(d) {
     const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cS = h.indexOf("Status Konseling"), cD = h.indexOf("Voucher Diserahkan");
     for (let i = 1; i < v.length; i++) {
       if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
-        if (d.serah && String(v[i][cS]).trim() === "") throw new Error("Sesi konseling belum selesai (status catatan belum diisi)");
+        if (d.serah && String(d.kode) !== VCH_SEMUA && String(v[i][cS]).trim() === "") throw new Error("Sesi konseling belum selesai (status catatan belum diisi)");
         const w = d.serah ? Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy, HH.mm") : "";
         sh.getRange(i + 1, cD + 1).setValue(w);
         return { ok: true, waktu: w };
