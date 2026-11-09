@@ -109,6 +109,13 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .acc-t{flex:1;min-width:0}.acc small{display:block;font-weight:500;color:var(--muted)}
 .badge{background:var(--teal-soft);color:var(--teal);border-radius:999px;padding:2px 12px;font-size:.85rem;white-space:nowrap}
 .acc-b{border-top:1px solid var(--line);padding:12px 18px 16px;overflow-x:auto}
+.phq{border:1px solid var(--line);border-radius:12px;padding:12px 14px 4px;margin:4px 0 14px;background:#F6FBFA}
+.phq h3{margin:0 0 2px;font-size:1rem;color:var(--plum)}.phq .q{padding:10px 0;border-top:1px solid var(--line)}
+.phq .q .lb{display:block;font-weight:600;font-size:.9rem;margin-bottom:6px}
+.phq .opts{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px}
+.phq .opts label{font-weight:500;font-size:.88rem;align-items:flex-start}
+.phq .hasil{font-weight:700}.phq-chip{display:inline-block;font-size:.75rem;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.pk-0{background:#DDF4F0;color:#0A6B58}.pk-1{background:#FBE7A1;color:#7A5600}.pk-2{background:#FFD9B8;color:#8A3B00}.pk-3{background:#F9C9C6;color:#8E1B14}
 .ptbl{border-collapse:collapse;width:100%;font-size:.85rem;min-width:820px}.ptbl th,.ptbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ptbl th{color:var(--muted);font-weight:600;white-space:nowrap}
 </style>
 </head>
@@ -358,6 +365,16 @@ function show(){
   $(".m-body").scrollTop=0}
 
 /* section 2: form peserta */
+/* ===== Skrining PHQ-4: khusus kelas tertentu (cocokkan KODE_KELAS atau nama) ===== */
+const PHQ4_KELAS=["C11.3.26.03.1"];
+const pakaiPHQ=k=>PHQ4_KELAS.includes(k.id)||/jajan curhat/i.test(k.nama||"");
+const PHQ_ITEMS=["Merasa gugup, cemas, atau tegang","Tidak dapat menghentikan atau mengendalikan rasa khawatir","Kurang berminat atau kurang menikmati dalam melakukan sesuatu","Merasa sedih, murung, atau putus asa"];
+const PHQ_OPSI=["Tidak sama sekali","Beberapa hari","Lebih dari separuh hari","Hampir setiap hari"];
+function phqHTML(n){
+  return `<div class="phq"><h3>Skrining PHQ-4</h3>
+  <div class="note">Selama <b>2 minggu terakhir</b>, seberapa sering kamu terganggu oleh masalah-masalah berikut?</div>
+  ${PHQ_ITEMS.map((t,q)=>`<div class="q" role="group" aria-label="${esc(t)}"><span class="lb">${q+1}. ${esc(t)}</span><div class="opts">${PHQ_OPSI.map((o,v)=>`<label><input type="radio" name="${n}phq${q+1}" value="${v}" ${v===0?"required":""}> ${o}</label>`).join("")}</div></div>`).join("")}
+  <div class="note" style="padding:8px 0">Skrining singkat ini hanya membantu tim Psychosoul memahami kondisimu dan bukan diagnosis. Jika kamu merasa sangat tertekan, segera hubungi admin atau orang terdekat.</div></div>`}
 function pesertaHTML(i){
   const n=`f${i}_`,tem=K.sasaran==="tematik";
   return `<fieldset data-i="${i}"><legend>${jumlah>1?"Peserta "+(i+1):"Data peserta"}</legend>
@@ -380,6 +397,7 @@ function pesertaHTML(i){
    <div data-sub="psikolog" hidden>
     <div class="row"><div class="field"><label for="${n}lama">Lama berpraktik (tahun)</label><input type="number" id="${n}lama" name="${n}lama_praktik" min="0" step="0.5" required disabled></div>
     <div class="field"><label for="${n}tk">Tempat kerja</label><input type="text" id="${n}tk" name="${n}tempat_kerja" required disabled></div></div></div>`:""}
+  ${pakaiPHQ(K)?phqHTML(n):""}
   </fieldset>`}
 $("#pesertaBox").addEventListener("change",e=>{
   if(!e.target.name.endsWith("_kerja"))return;
@@ -424,7 +442,9 @@ async function submit(file){
   const er=$("#buktiErr"),btn=$("#next");
   const peserta=[...document.querySelectorAll("#pesertaBox fieldset")].map(fs=>{
     const o={};fs.querySelectorAll("input,textarea").forEach(x=>{
-      if(x.disabled)return;if(x.type==="radio"&&!x.checked)return;o[x.name.replace(/^f\d+_/,"")]=x.value});return o});
+      if(x.disabled)return;if(x.type==="radio"&&!x.checked)return;o[x.name.replace(/^f\d+_/,"")]=x.value});
+    if(o.phq1!==undefined){const s=[1,2,3,4].map(q=>Number(o["phq"+q]));o.phq_cemas=s[0]+s[1];o.phq_depresi=s[2]+s[3];o.phq_total=o.phq_cemas+o.phq_depresi}
+    return o});
   if(!API_URL){er.textContent="Pendaftaran belum terhubung ke Google Sheet (API_URL belum diisi).";er.hidden=false;return}
   btn.disabled=true;btn.textContent="Mengirim…";
   try{
@@ -449,7 +469,7 @@ const DEMO_DATA=(()=>{
       row(J,jc,"REG-261109-081200-101","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
       row(J,jc,"REG-261109-084500-102","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
       row(J,jc,"REG-261109-091000-103","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Menunggu verifikasi",bk),
-      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)],
+      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0)}}),
     [R]:[
       row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
       row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
@@ -480,11 +500,16 @@ function detailPeserta(r){
   if(r["Pekerjaan"]==="mahasiswa")return esc([r["Jurusan"],r["Semester"]?"sem "+r["Semester"]:"",r["Tempat Pendidikan"]].filter(Boolean).join(", "));
   if(r["Pekerjaan"]==="psikolog")return esc([r["Lama Praktik (thn)"]?r["Lama Praktik (thn)"]+" thn":"",r["Tempat Kerja"]].filter(Boolean).join(", "));
   return "-"}
+const phqKat=t=>t<=2?[0,"Normal"]:t<=5?[1,"Ringan"]:t<=8?[2,"Sedang"]:[3,"Berat"];
+function phqCell(r){const t=r["PHQ-4 Total"];if(t===undefined||t===null||t==="")return"-";
+  const T=Number(t),c=Number(r["PHQ-4 Cemas"]),d=Number(r["PHQ-4 Depresi"]),[k,l]=phqKat(T);
+  return`<span class="hasil">${T}/12</span> <span class="phq-chip pk-${k}">${l}</span><br><small>Cemas ${c}${c>=3?" (+)":""} · Depresi ${d}${d>=3?" (+)":""}<br>Jawaban: ${esc(String(r["PHQ-4 Jawaban"]||"-"))}</small>`}
 function tabelPeserta(rows){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
-  return`<table class="ptbl"><thead><tr><th>No</th><th>Nama</th><th>Usia</th><th>JK</th><th>No WA</th><th>Alamat</th><th>Pekerjaan</th><th>Detail</th><th>Pembiayaan</th><th>Bukti</th><th>Status</th><th>Waktu</th></tr></thead><tbody>`+
+  const adaPHQ=rows.some(r=>String(r["PHQ-4 Total"]==null?"":r["PHQ-4 Total"])!=="");
+  return`<table class="ptbl"><thead><tr><th>No</th><th>Nama</th><th>Usia</th><th>JK</th><th>No WA</th><th>Alamat</th><th>Pekerjaan</th><th>Detail</th>${adaPHQ?"<th>PHQ-4</th>":""}<th>Pembiayaan</th><th>Bukti</th><th>Status</th><th>Waktu</th></tr></thead><tbody>`+
   rows.map((r,i)=>`<tr><td>${i+1}</td><td>${A(r,"Nama")}</td><td>${A(r,"Usia")}</td><td>${A(r,"Jenis Kelamin")}</td><td>${A(r,"No WA")}</td><td>${A(r,"Alamat")}</td><td>${A(r,"Pekerjaan")}</td><td>${detailPeserta(r)}</td>
-   <td>${A(r,"Pembiayaan")}${r["Peserta ke"]==1?"<br>"+rp(Number(r["Total"])||0):""}</td>
+   ${adaPHQ?`<td>${phqCell(r)}</td>`:""}<td>${A(r,"Pembiayaan")}${r["Peserta ke"]==1?"<br>"+rp(Number(r["Total"])||0):""}</td>
    <td>${String(r["Bukti Bayar"]||"").startsWith("https://")?`<a href="${esc(r["Bukti Bayar"])}" target="_blank" rel="noopener">Lihat</a>`:"-"}</td><td>${A(r,"Status Bayar")}</td><td>${A(r,"Waktu")}</td></tr>`).join("")+"</tbody></table>"}
 function renderAdmin(){
   const on=kelas.filter(k=>status(k)==="ongoing").sort((a,b)=>(a.tanggal||"9").localeCompare(b.tanggal||"9"));
