@@ -574,13 +574,13 @@ const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-k
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
   const cat=pakaiPHQ(k);
-  return`<table class="ptbl"><thead><tr><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th><th>Keterangan</th>${cat?"<th>Catatan</th>":""}</tr></thead><tbody>`+
+  return`<table class="ptbl"><thead><tr><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th></tr></thead><tbody>`+
   rows.map(r=>{const w=pecahWaktu(r["Waktu"]);
    return`<tr><td><span class="m">${esc(w.d)}</span><span class="fn">${esc(w.j)}</span></td>
    <td><span class="m">${A(r,"Nama")}</span><span class="fn">${esc(String(r["Usia"]||"-"))} th / ${jkS(r["Jenis Kelamin"])}</span></td>
    <td>${A(r,"Alamat")}<span class="fn">${waLink(r["No WA"])}</span></td>
    <td><span class="m">${A(r,"Pekerjaan")}</span><span class="fn">${detailPeserta(r)}</span></td>
-   <td>${payCell(k,r)}</td><td>${ketCell(k,r)}</td>${cat?`<td>${catCell(k,r)}</td>`:""}</tr>`}).join("")+"</tbody></table>"}
+   <td>${payCell(k,r)}</td>${cat?`<td>${catCell(k,r)}</td>`:""}<td>${ketCell(k,r)}</td></tr>`}).join("")+"</tbody></table>"}
 function renderAdmin(){
   const on=kelas.filter(k=>status(k)==="ongoing").sort((a,b)=>(a.tanggal||"9").localeCompare(b.tanggal||"9"));
   $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going${adminPin==="demo"?` <span class="badge">MODE DEMO · data dummy</span>`:""}</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
