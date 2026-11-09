@@ -130,6 +130,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .cat-btn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:.78rem;font-weight:700;border:1.5px solid currentColor;background:#fff;border-radius:999px;padding:4px 10px;cursor:pointer}
 .cat-btn:hover{background:#F4F7FB}
 .k-none{color:#8A93A6}.k-selesai{color:#2563EB}.k-eskalasi{color:#E0A100}.k-risiko{color:#D32F2F}
+#vchBox canvas{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:12px}#vchBox .note{margin-top:8px}
 .kv{display:grid;grid-template-columns:150px 1fr;gap:6px 12px;font-size:.9rem;margin:0}.kv dt{color:var(--muted)}.kv dd{margin:0;font-weight:600;word-break:break-word}
 @media(max-width:520px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
 .pay-btn{font:inherit;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--ink)}.pay-btn b{display:block;text-decoration:underline dotted;text-underline-offset:3px}.pay-btn small{display:block;font-size:.75rem}
@@ -170,8 +171,8 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 </form></dialog>
 <dialog id="ket" aria-labelledby="ketT">
   <div class="m-head"><div><h2 id="ketT">Keterangan</h2><div class="desc" id="ketSub"></div></div><button type="button" class="x" id="ketX" aria-label="Tutup">&times;</button></div>
-  <div class="m-body"><dl class="kv" id="ketBody"></dl></div>
-  <div class="m-foot"><button type="button" class="btn ghost" id="ketCancel">Tutup</button></div>
+  <div class="m-body"><dl class="kv" id="ketBody"></dl><div id="vchBox" hidden></div></div>
+  <div class="m-foot"><button type="button" class="btn ghost" id="ketCancel">Tutup</button><button type="button" class="btn" id="ketDl" hidden>Download voucher (PNG)</button></div>
 </dialog>
 <dialog id="kons" aria-labelledby="konsT">
 <form id="konsForm">
@@ -569,7 +570,15 @@ function payCell(k,r){const st=stBayar(r),nom=Number(r["Peserta ke"])===1?rp(Num
 const IC_EYE='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const IC_DOC='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>';
 const ksClass=r=>({"selesai":"k-selesai","eskalasi":"k-eskalasi","risiko tinggi":"k-risiko"})[String(r["Status Konseling"]||"").trim().toLowerCase()]||"k-none";
-const ketCell=(k,r)=>`<button type="button" class="ic-btn" data-ket="${esc(konsKey(k,r))}">${IC_DOC} Lihat isi</button>`;
+/* ===== Voucher diskon di kolom Keterangan (khusus kelas tertentu) ===== */
+const VCH_KELAS=["C11.3.26.03.1"];          // kelas yang pesertanya mendapat voucher (Jajan Curhat)
+const VCH_UNTUK="C11.3.26.03.2";            // kelas tujuan voucher (Reflektif & Creative Journaling)
+const VCH_NAMA="Reflektif & Creative Journaling";
+const VCH_DISKON=10;                        // persen
+const VCH_PREFIX="2611.DE09";               // kode voucher = PREFIX.NO_URUT
+const VCH_PAD=3;                            // 001, 002, ...
+const vchKode=no=>VCH_PREFIX+"."+String(no).padStart(VCH_PAD,"0");
+const ketCell=(k,r)=>`<button type="button" class="ic-btn" data-ket="${esc(konsKey(k,r))}">${IC_DOC} ${VCH_KELAS.includes(k.id)?"Voucher":"Lihat isi"}</button>`;
 const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-kons="${esc(konsKey(k,r))}" title="Catatan${r["Status Konseling"]?": "+esc(r["Status Konseling"]):""}" aria-label="Lihat catatan ${esc(r["Nama"]||"")}">${IC_EYE}${adaPHQrow(r)?`<span>${Number(r["PHQ-4 Total"])}/12</span>`:""}</button>`;
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
@@ -620,6 +629,8 @@ $("#byrOk").addEventListener("click",()=>setVerif("Sesuai"));$("#byrBad").addEve
 $("#byrX").addEventListener("click",()=>$("#byr").close());
 function bukaKet(key){
   const [kode,id,ke]=key.split("|"),r=(adminData[kode]||[]).find(x=>String(x["ID Daftar"])===id&&String(x["Peserta ke"])===ke);if(!r)return;
+  $("#ketT").textContent="Keterangan";$("#ketBody").hidden=false;$("#vchBox").hidden=true;$("#ketDl").hidden=true;
+  if(VCH_KELAS.includes(kode)){bukaVoucher(kode,r);return}
   const w=pecahWaktu(r["Waktu"]),st=stBayar(r);
   $("#ketSub").textContent=String(r["Nama"]||"")+" · "+String(r["Kelas"]||kode);
   const kv=[["ID daftar",r["ID Daftar"]],["Kode kelas",r["Kode Kelas"]||kode],["Waktu daftar",w.j?`${w.d} ${w.j}`:w.d],["Nama",r["Nama"]],["Usia",r["Usia"]?r["Usia"]+" tahun":""],
@@ -628,6 +639,41 @@ function bukaKet(key){
     ["Pembiayaan",jenisLabel(r["Pembiayaan"])],["Total pembayaran",rp(Number(r["Total"])||0)],["Peserta ke",r["Peserta ke"]],["Status pembayaran",stLabel[st]]];
   $("#ketBody").innerHTML=kv.filter(x=>x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!=="").map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
   $("#ket").showModal()}
+const tglPanjang=s=>s?new Intl.DateTimeFormat("id-ID",{day:"numeric",month:"long",year:"numeric"}).format(new Date(s+"T00:00:00")):"";
+function bungkus(g,t,x,y,w,lh){const ws=String(t).split(" ");let ln="";const out=[];
+  ws.forEach(k=>{const c=ln?ln+" "+k:k;if(g.measureText(c).width>w&&ln){out.push(ln);ln=k}else ln=c});out.push(ln);
+  out.forEach((l,i)=>g.fillText(l,x,y+i*lh));return out.length}
+async function gambarVoucher(nama,kode,berlaku){
+  try{await Promise.all(["700 30px Figtree","800 150px Figtree","700 34px Bricolage Grotesque"].map(f=>document.fonts.load(f)))}catch(e){}
+  const F="Figtree, system-ui, sans-serif",c=document.createElement("canvas");c.width=1000;c.height=680;const g=c.getContext("2d");
+  g.fillStyle="#fff";g.fillRect(0,0,1000,680);
+  const bar=g.createLinearGradient(0,0,1000,0);bar.addColorStop(0,"#12BFA0");bar.addColorStop(.5,"#3B8BC8");bar.addColorStop(1,"#0E4A86");g.fillStyle=bar;g.fillRect(0,0,1000,14);
+  g.strokeStyle="#D5E0EC";g.lineWidth=2;g.strokeRect(1,1,998,678);
+  const lg=document.getElementById("logoBtn");if(lg&&lg.naturalWidth){const hh=96;g.drawImage(lg,48,34,hh*lg.naturalWidth/lg.naturalHeight,hh)}
+  g.textBaseline="alphabetic";g.fillStyle="#0E4A86";g.font=`700 30px ${F}`;g.fillText("VOUCHER DISKON",48,190);
+  g.fillStyle="#0E8F7C";g.font=`800 150px ${F}`;g.fillText(VCH_DISKON+"%",48,326);
+  g.fillStyle="#55667F";g.font=`500 22px ${F}`;g.fillText("Khusus untuk kelas",380,238);
+  g.fillStyle="#14233F";g.font=`700 36px ${F}`;const n=bungkus(g,VCH_NAMA,380,284,570,44);
+  g.fillStyle="#55667F";g.font=`500 20px ${F}`;g.fillText("Atas nama",48,414);
+  g.fillStyle="#14233F";g.font=`700 32px ${F}`;g.fillText(String(nama||"-").slice(0,48),48,452);
+  g.fillStyle="#DDF4F0";g.beginPath();g.roundRect(48,482,904,122,16);g.fill();
+  g.setLineDash([10,8]);g.strokeStyle="#0E8F7C";g.lineWidth=2;g.stroke();g.setLineDash([]);
+  g.fillStyle="#0E8F7C";g.font=`700 18px ${F}`;g.fillText("KODE VOUCHER",76,520);
+  g.fillStyle="#0E4A86";g.font=`800 56px ui-monospace, Menlo, Consolas, monospace`;g.fillText(kode,76,580);
+  if(berlaku){g.textAlign="right";g.fillStyle="#55667F";g.font=`500 18px ${F}`;g.fillText("Berlaku sampai",928,520);
+    g.fillStyle="#14233F";g.font=`700 26px ${F}`;g.fillText(berlaku,928,556);g.textAlign="left"}
+  g.fillStyle="#55667F";g.font=`500 16px ${F}`;g.textAlign="center";
+  g.fillText("Berlaku untuk 1 peserta · Sebutkan kode voucher saat mendaftar · Tidak dapat diuangkan",500,646);g.textAlign="left";
+  return c}
+async function bukaVoucher(kode,r){
+  const no=(adminData[kode]||[]).indexOf(r)+1,vk=vchKode(no),tuju=kelas.find(x=>x.id===VCH_UNTUK);
+  const berlaku=tglPanjang(tuju&&(tuju.harga.regulerSampai||tuju.tanggal));
+  $("#ketT").textContent="Voucher diskon "+VCH_DISKON+"%";$("#ketSub").textContent=String(r["Nama"]||"")+" · "+vk;
+  $("#ketBody").hidden=true;$("#vchBox").hidden=false;$("#vchBox").innerHTML='<span class="desc">Membuat voucher…</span>';$("#ket").showModal();
+  const c=await gambarVoucher(r["Nama"],vk,berlaku);
+  $("#vchBox").innerHTML="";$("#vchBox").appendChild(c);
+  const nt=document.createElement("div");nt.className="note";nt.textContent="Nomor urut ("+no+") mengikuti urutan pendaftar pada tabel.";$("#vchBox").appendChild(nt);
+  const dl=$("#ketDl");dl.hidden=false;dl.onclick=()=>{const a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="voucher-"+vk+".png";document.body.appendChild(a);a.click();a.remove()}}
 $("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-ket]");if(b)bukaKet(b.dataset.ket)});
 $("#ketX").addEventListener("click",()=>$("#ket").close());$("#ketCancel").addEventListener("click",()=>$("#ket").close());
 let konsRow=null,konsKode=null;
