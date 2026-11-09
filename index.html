@@ -116,6 +116,10 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .phq .opts label{font-weight:500;font-size:.88rem;align-items:flex-start}
 .phq .hasil{font-weight:700}.phq-chip{display:inline-block;font-size:.75rem;font-weight:700;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .pk-0{background:#DDF4F0;color:#0A6B58}.pk-1{background:#FBE7A1;color:#7A5600}.pk-2{background:#FFD9B8;color:#8A3B00}.pk-3{background:#F9C9C6;color:#8E1B14}
+.kons-btn{font:inherit;font-size:.8rem;font-weight:600;border:1px solid var(--plum);background:#fff;color:var(--plum);border-radius:8px;padding:4px 10px;cursor:pointer;margin-top:4px}
+.kons-btn:hover{background:var(--plum);color:#fff}.kons-ok{font-size:.75rem;color:#0A6B58;font-weight:600;display:block}.kons-no{font-size:.75rem;color:var(--muted);display:block}
+.phq-det{width:100%;border-collapse:collapse;font-size:.88rem;margin:6px 0 10px}.phq-det td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top}.phq-det td:last-child{text-align:right;white-space:nowrap;font-weight:600}
+.phq-sum{display:flex;flex-wrap:wrap;gap:8px 18px;background:var(--teal-soft);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:.9rem}
 .ptbl{border-collapse:collapse;width:100%;font-size:.85rem;min-width:820px}.ptbl th,.ptbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ptbl th{color:var(--muted);font-weight:600;white-space:nowrap}
 </style>
 </head>
@@ -137,6 +141,17 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 <footer class="wrap">Jadwal dan biaya dapat berubah. Hubungi Psychosoul untuk informasi terbaru.</footer></div>
 <div class="scroll" id="adminScroll" hidden><main class="wrap" id="adminMain"></main></div>
 
+<dialog id="kons" aria-labelledby="konsT">
+<form id="konsForm">
+  <div class="m-head"><div><h2 id="konsT">PHQ-4 &amp; Konseling</h2><div class="desc" id="konsSub"></div></div><button type="button" class="x" id="konsX" aria-label="Tutup">&times;</button></div>
+  <div class="m-body">
+    <div id="konsPhq"></div>
+    <div class="field"><label for="konsHasil">Hasil konseling</label><textarea id="konsHasil" rows="5" maxlength="3000" placeholder="Ringkasan hasil konseling"></textarea></div>
+    <div class="field"><label for="konsNama">Nama konselor</label><input type="text" id="konsNama" maxlength="120" autocomplete="off"></div>
+    <div class="err" id="konsErr" hidden></div>
+  </div>
+  <div class="m-foot"><button type="button" class="btn ghost" id="konsCancel">Tutup</button><button type="submit" class="btn" id="konsGo">Simpan</button></div>
+</form></dialog>
 <dialog id="pin" aria-labelledby="pinT" style="width:min(380px,calc(100% - 24px))">
 <form id="pinForm">
   <div class="m-head"><h2 id="pinT">Masuk admin</h2><button type="button" class="x" id="pinX" aria-label="Tutup">&times;</button></div>
@@ -469,7 +484,7 @@ const DEMO_DATA=(()=>{
       row(J,jc,"REG-261109-081200-101","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
       row(J,jc,"REG-261109-084500-102","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
       row(J,jc,"REG-261109-091000-103","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Menunggu verifikasi",bk),
-      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0)}}),
+      row(J,jc,"REG-261109-094000-104","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog"}:{})}}),
     [R]:[
       row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
       row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
@@ -501,23 +516,54 @@ function detailPeserta(r){
   if(r["Pekerjaan"]==="psikolog")return esc([r["Lama Praktik (thn)"]?r["Lama Praktik (thn)"]+" thn":"",r["Tempat Kerja"]].filter(Boolean).join(", "));
   return "-"}
 const phqKat=t=>t<=2?[0,"Normal"]:t<=5?[1,"Ringan"]:t<=8?[2,"Sedang"]:[3,"Berat"];
-function phqCell(r){const t=r["PHQ-4 Total"];if(t===undefined||t===null||t==="")return"-";
-  const T=Number(t),c=Number(r["PHQ-4 Cemas"]),d=Number(r["PHQ-4 Depresi"]),[k,l]=phqKat(T);
-  return`<span class="hasil">${T}/12</span> <span class="phq-chip pk-${k}">${l}</span><br><small>Cemas ${c}${c>=3?" (+)":""} · Depresi ${d}${d>=3?" (+)":""}<br>Jawaban: ${esc(String(r["PHQ-4 Jawaban"]||"-"))}</small>`}
-function tabelPeserta(rows){
+const adaPHQrow=r=>String(r["PHQ-4 Total"]==null?"":r["PHQ-4 Total"])!=="";
+const konsKey=(k,r)=>[k.id,r["ID Daftar"],r["Peserta ke"]].join("|");
+function ketCell(k,r){
+  const ring=adaPHQrow(r)?(()=>{const T=Number(r["PHQ-4 Total"]),[c,l]=phqKat(T);return`<span class="hasil">${T}/12</span> <span class="phq-chip pk-${c}">${l}</span>`})():'<span class="kons-no">PHQ-4: belum ada</span>';
+  const sudah=String(r["Hasil Konseling"]||"").trim()!=="";
+  return`${ring}<span class="${sudah?"kons-ok":"kons-no"}">${sudah?"Konseling: sudah diisi":"Konseling: belum diisi"}</span><button type="button" class="kons-btn" data-kons="${esc(konsKey(k,r))}">Lihat / isi</button>`}
+function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
-  const adaPHQ=rows.some(r=>String(r["PHQ-4 Total"]==null?"":r["PHQ-4 Total"])!=="");
-  return`<table class="ptbl"><thead><tr><th>No</th><th>Nama</th><th>Usia</th><th>JK</th><th>No WA</th><th>Alamat</th><th>Pekerjaan</th><th>Detail</th>${adaPHQ?"<th>PHQ-4</th>":""}<th>Pembiayaan</th><th>Bukti</th><th>Status</th><th>Waktu</th></tr></thead><tbody>`+
+  const ket=pakaiPHQ(k);
+  return`<table class="ptbl"><thead><tr><th>No</th><th>Nama</th><th>Usia</th><th>JK</th><th>No WA</th><th>Alamat</th><th>Pekerjaan</th><th>Detail</th>${ket?"<th>Keterangan</th>":""}<th>Pembiayaan</th><th>Bukti</th><th>Status</th><th>Waktu</th></tr></thead><tbody>`+
   rows.map((r,i)=>`<tr><td>${i+1}</td><td>${A(r,"Nama")}</td><td>${A(r,"Usia")}</td><td>${A(r,"Jenis Kelamin")}</td><td>${A(r,"No WA")}</td><td>${A(r,"Alamat")}</td><td>${A(r,"Pekerjaan")}</td><td>${detailPeserta(r)}</td>
-   ${adaPHQ?`<td>${phqCell(r)}</td>`:""}<td>${A(r,"Pembiayaan")}${r["Peserta ke"]==1?"<br>"+rp(Number(r["Total"])||0):""}</td>
+   ${ket?`<td>${ketCell(k,r)}</td>`:""}<td>${A(r,"Pembiayaan")}${r["Peserta ke"]==1?"<br>"+rp(Number(r["Total"])||0):""}</td>
    <td>${String(r["Bukti Bayar"]||"").startsWith("https://")?`<a href="${esc(r["Bukti Bayar"])}" target="_blank" rel="noopener">Lihat</a>`:"-"}</td><td>${A(r,"Status Bayar")}</td><td>${A(r,"Waktu")}</td></tr>`).join("")+"</tbody></table>"}
 function renderAdmin(){
   const on=kelas.filter(k=>status(k)==="ongoing").sort((a,b)=>(a.tanggal||"9").localeCompare(b.tanggal||"9"));
   $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going${adminPin==="demo"?` <span class="badge">MODE DEMO · data dummy</span>`:""}</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
    <div class="adm-act"><button type="button" class="btn ghost" id="admRefresh">Muat ulang</button><button type="button" class="btn ghost" id="admExit">Keluar</button></div></div>`+
   (on.length?on.map(k=>{const rows=adminData[k.id]||[];
-    return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span></summary><div class="acc-b">${tabelPeserta(rows)}</div></details>`}).join("")
+    return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span></summary><div class="acc-b">${tabelPeserta(rows,k)}</div></details>`}).join("")
    :'<div class="empty">Belum ada kelas/event dengan status On going.</div>')}
+let konsRow=null,konsKode=null;
+function bukaKons(key){
+  const [kode,id,ke]=key.split("|"),rows=adminData[kode]||[];
+  const r=rows.find(x=>String(x["ID Daftar"])===id&&String(x["Peserta ke"])===ke);if(!r)return;
+  konsRow=r;konsKode=kode;
+  $("#konsSub").textContent=String(r["Nama"]||"")+" · "+String(r["Kelas"]||"");
+  let phqHtml;
+  if(adaPHQrow(r)){
+    const a=String(r["PHQ-4 Jawaban"]||"").split(",").map(Number),T=Number(r["PHQ-4 Total"]),c=Number(r["PHQ-4 Cemas"]),d=Number(r["PHQ-4 Depresi"]),[kc,kl]=phqKat(T);
+    phqHtml=`<h3 style="margin:0 0 4px;font-size:1rem">Hasil PHQ-4</h3>
+    <table class="phq-det"><tbody>${PHQ_ITEMS.map((t,i)=>`<tr><td>${i+1}. ${esc(t)}</td><td>${esc(PHQ_OPSI[a[i]]||"-")} (${isNaN(a[i])?"-":a[i]})</td></tr>`).join("")}</tbody></table>
+    <div class="phq-sum"><span>Total: <b>${T}/12</b> <span class="phq-chip pk-${kc}">${kl}</span></span><span>Cemas (butir 1–2): <b>${c}</b>${c>=3?" · positif":""}</span><span>Depresi (butir 3–4): <b>${d}</b>${d>=3?" · positif":""}</span></div>
+    <div class="note" style="margin-bottom:14px">Skor 3 atau lebih pada subskala Cemas atau Depresi menandakan perlu penelusuran lebih lanjut. PHQ-4 adalah skrining, bukan diagnosis.</div>`}
+  else phqHtml='<div class="phq-sum">Belum ada data PHQ-4 untuk peserta ini.</div>';
+  $("#konsPhq").innerHTML=phqHtml;
+  $("#konsHasil").value=r["Hasil Konseling"]||"";$("#konsNama").value=r["Nama Konselor"]||"";
+  $("#konsErr").hidden=true;$("#kons").showModal()}
+$("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-kons]");if(b)bukaKons(b.dataset.kons)});
+$("#konsX").addEventListener("click",()=>$("#kons").close());$("#konsCancel").addEventListener("click",()=>$("#kons").close());
+$("#konsForm").addEventListener("submit",async e=>{e.preventDefault();
+  const b=$("#konsGo"),er=$("#konsErr"),hasil=$("#konsHasil").value.trim(),nama=$("#konsNama").value.trim();
+  b.disabled=true;b.textContent="Menyimpan…";er.hidden=true;
+  try{
+    if(!(adminPin===DEMO_PIN)){const r=await api({action:"konseling",pin:adminPin,kode:konsKode,id:konsRow["ID Daftar"],ke:konsRow["Peserta ke"],hasil,konselor:nama});if(!r.ok)throw new Error(r.error||"Gagal menyimpan")}
+    konsRow["Hasil Konseling"]=hasil;konsRow["Nama Konselor"]=nama;
+    $("#kons").close();renderAdmin()}
+  catch(err){er.textContent="Gagal menyimpan: "+err.message;er.hidden=false}
+  finally{b.disabled=false;b.textContent="Simpan"}});
 $("#adminMain").addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.k)d.open?openAcc.add(d.dataset.k):openAcc.delete(d.dataset.k)},true);
 $("#adminMain").addEventListener("click",async e=>{
   if(e.target.closest("#admExit")){setAdmin(false);return}

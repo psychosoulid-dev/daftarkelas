@@ -15,7 +15,8 @@ const FOLDER_NAME = "Bukti Pembayaran Psychosoul";
 const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Peserta ke","Nama","Usia",
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
-  "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total"];   // 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
+  "Hasil Konseling","Nama Konselor"];   // 2 kolom terakhir diisi admin lewat halaman admin   // 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -27,6 +28,7 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     if (d.action === "daftar") return out(daftar(d));
     if (d.action === "admin") return out(admin(d));
+    if (d.action === "konseling") return out(konseling(d));
     return out({ ok: false, error: "Aksi tidak dikenal" });
   } catch (err) { return out({ ok: false, error: String(err.message || err) }); }
 }
@@ -45,6 +47,38 @@ function phq(p) {
   return [n.join(","), n[0] + n[1], n[2] + n[3], n[0] + n[1] + n[2] + n[3]];
 }
 
+function ensureHeader(sh) {                                // sheet lama: tambah header kolom baru bila kurang
+  const have = sh.getLastColumn();
+  if (have < HEAD.length) sh.getRange(1, have + 1, 1, HEAD.length - have).setValues([HEAD.slice(have)]).setFontWeight("bold");
+}
+
+function cekPin(d) {
+  const pin = PropertiesService.getScriptProperties().getProperty("ADMIN_PIN");
+  if (!pin) return "ADMIN_PIN belum diatur di Script properties";
+  if (String(d.pin) !== pin) { Utilities.sleep(800); return "PIN salah"; }
+  return null;
+}
+
+// Admin mengisi hasil konseling & nama konselor untuk satu peserta (dicari lewat ID Daftar + Peserta ke)
+function konseling(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const sh = SpreadsheetApp.openById(SS_ID).getSheetByName(String(d.kode || ""));
+    if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
+    ensureHeader(sh);
+    const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
+    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor");
+    for (let i = 1; i < v.length; i++) {
+      if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
+        sh.getRange(i + 1, cH + 1, 1, 2).setValues([[safe(String(d.hasil || "").slice(0, 3000)), safe(String(d.konselor || "").slice(0, 120))]]);
+        return { ok: true };
+      }
+    }
+    throw new Error("Data peserta tidak ditemukan");
+  } finally { lock.releaseLock(); }
+}
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
@@ -56,10 +90,7 @@ function daftar(d) {
       sh = ss.insertSheet(kode);
       sh.appendRow(HEAD); sh.setFrozenRows(1);
       sh.getRange(1, 1, 1, HEAD.length).setFontWeight("bold");
-    } else if (sh.getLastColumn() < HEAD.length) {          // sheet lama: tambah header kolom baru (PHQ-4)
-      const have = sh.getLastColumn();
-      sh.getRange(1, have + 1, 1, HEAD.length - have).setValues([HEAD.slice(have)]).setFontWeight("bold");
-    }
+    } else ensureHeader(sh);
     const id = "REG-" + Utilities.formatDate(new Date(), "Asia/Jakarta", "yyMMdd-HHmmss") + "-" + Math.floor(100 + Math.random() * 900);
     let link = "";
     if (d.bukti && d.bukti.data) {
@@ -71,7 +102,7 @@ function daftar(d) {
     const rows = d.peserta.map((p, i) => [now, id, kode, safe(d.kelas), safe(d.pembiayaan), Number(d.total) || 0, i + 1,
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
-      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p)));
+      safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p), ["", ""]));
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
@@ -79,9 +110,7 @@ function daftar(d) {
 }
 
 function admin(d) {
-  const pin = PropertiesService.getScriptProperties().getProperty("ADMIN_PIN");
-  if (!pin) return { ok: false, error: "ADMIN_PIN belum diatur di Script properties" };
-  if (String(d.pin) !== pin) { Utilities.sleep(800); return { ok: false, error: "PIN salah" }; }
+  const err = cekPin(d); if (err) return { ok: false, error: err };
   const data = {};
   SpreadsheetApp.openById(SS_ID).getSheets().forEach(sh => {
     if (sh.getLastRow() < 1 || sh.getRange(1, 1).getValue() !== "Waktu") return;   // hanya sheet kelas
