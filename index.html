@@ -439,6 +439,7 @@ async function submit(file){
 /* ===== Admin: klik logo ===== */
 /*DEMO_START - data dummy simulasi admin. HAPUS blok ini sampai DEMO_END (dan 2 baris bertanda DEMO) bila sudah selesai */
 const DEMO_PIN="demo";
+const DEMO_SKIP_PIN=true; // true = klik logo langsung masuk admin (data dummy), tanpa kode login. Ubah ke false untuk meminta PIN lagi
 const DEMO_DATA=(()=>{
   const bk="https://example.com/bukti-dummy.jpg",J="C11.3.26.03.1",R="C11.3.26.03.2";
   const row=(kode,kelas,id,pemb,total,ke,w,nama,usia,jk,wa,alamat,st,bukti)=>({"Waktu":w,"ID Daftar":id,"Kode Kelas":kode,"Kelas":kelas,"Pembiayaan":pemb,"Total":total,"Peserta ke":ke,"Nama":nama,"Usia":usia,"Jenis Kelamin":jk,"No WA":wa,"Alamat":alamat,"Pekerjaan":"-","Jurusan":"","Semester":"","Tempat Pendidikan":"","Lama Praktik (thn)":"","Tempat Kerja":"","Bukti Bayar":bukti,"Status Bayar":st});
@@ -458,7 +459,9 @@ const DEMO_DATA=(()=>{
 let adminPin=null,adminData={},adminOn=false;const openAcc=new Set();
 function setAdmin(on){adminOn=on;$("#scroll").hidden=on;$("#adminScroll").hidden=!on;$("#filters").hidden=on;
   document.title=on?"Admin – Psychosoul":"Daftar Kelas – Layanan Psikologi Psychosoul";if(on)renderAdmin();else adminPin=null}
-function logoClick(){if(adminOn){setAdmin(false);return}$("#pinIn").value="";$("#pinErr").hidden=true;$("#pin").showModal();$("#pinIn").focus()}
+function logoClick(){if(adminOn){setAdmin(false);return}
+  if(typeof DEMO_SKIP_PIN!=="undefined"&&DEMO_SKIP_PIN){adminPin=DEMO_PIN;adminData=DEMO_DATA;setAdmin(true);return} // DEMO
+  $("#pinIn").value="";$("#pinErr").hidden=true;$("#pin").showModal();$("#pinIn").focus()}
 $("#logoBtn").addEventListener("click",logoClick);
 $("#logoBtn").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();logoClick()}});
 $("#pinX").addEventListener("click",()=>$("#pin").close());$("#pinCancel").addEventListener("click",()=>$("#pin").close());
