@@ -182,7 +182,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
     <div id="konsPhq"></div>
     <div class="field"><label for="konsHasil">Hasil konseling</label><textarea id="konsHasil" rows="5" maxlength="3000" placeholder="Ringkasan hasil konseling"></textarea></div>
     <div class="field"><label for="konsStatus">Status</label><select id="konsStatus"><option value="">Belum ditentukan</option><option value="Selesai">Selesai</option><option value="Eskalasi">Eskalasi</option><option value="Risiko tinggi">Risiko tinggi</option></select>
-      <div class="note">Warna ikon catatan: Selesai = biru, Eskalasi = kuning, Risiko tinggi = merah.</div></div>
+      <div class="note">Warna ikon catatan: Selesai = biru, Eskalasi = kuning, Risiko tinggi = merah. Status apa pun yang dipilih berarti sesi konseling sudah selesai (voucher dan centang Diserahkan jadi aktif).</div></div>
     <div class="field"><label for="konsNama">Nama konselor</label><input type="text" id="konsNama" maxlength="120" autocomplete="off"></div>
     <div class="err" id="konsErr" hidden></div>
   </div>
@@ -583,7 +583,7 @@ const vchQR=new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=
 const vchKode=no=>VCH_PREFIX+"."+String(no).padStart(VCH_PAD,"0");
 const ketCell=(k,r)=>`<button type="button" class="ic-btn" data-ket="${esc(konsKey(k,r))}">${IC_DOC} ${VCH_KELAS.includes(k.id)?"Voucher":"Lihat isi"}</button>`;
 const serahCell=(k,r)=>{const ok=konsSelesai(r),s=String(r["Voucher Diserahkan"]||"");
-  return`<label class="serah" title="${ok?(s?"Diserahkan "+esc(s):"Belum diserahkan"):"Tersedia setelah konseling berstatus Selesai"}"><input type="checkbox" class="serah-ck" data-serah="${esc(konsKey(k,r))}" ${s?"checked":""} ${ok?"":"disabled"} aria-label="Voucher sudah diserahkan"></label>`};
+  return`<label class="serah" title="${ok?(s?"Diserahkan "+esc(s):"Belum diserahkan"):"Tersedia setelah sesi konseling selesai (status catatan sudah diisi)"}"><input type="checkbox" class="serah-ck" data-serah="${esc(konsKey(k,r))}" ${s?"checked":""} ${ok?"":"disabled"} aria-label="Voucher sudah diserahkan"></label>`};
 const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-kons="${esc(konsKey(k,r))}" title="Catatan${r["Status Konseling"]?": "+esc(r["Status Konseling"]):""}" aria-label="Lihat catatan ${esc(r["Nama"]||"")}">${IC_EYE}${adaPHQrow(r)?`<span>${Number(r["PHQ-4 Total"])}/12</span>`:""}</button>`;
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
@@ -671,12 +671,12 @@ async function gambarVoucher(nama,kode,berlaku){
   g.fillStyle="#55667F";g.font=`500 16px ${F}`;g.textAlign="center";
   g.fillText("Berlaku untuk 1 peserta · Sebutkan kode voucher saat mendaftar · Tidak dapat diuangkan",500,646);g.textAlign="left";
   return c}
-const konsSelesai=r=>String(r["Status Konseling"]||"").trim().toLowerCase()==="selesai";
+const konsSelesai=r=>String(r["Status Konseling"]||"").trim()!==""; // status follow-up apa pun (Selesai/Eskalasi/Risiko tinggi) = sesi konseling sudah selesai
 async function bukaVoucher(kode,r){
-  if(!konsSelesai(r)){ // voucher baru tersedia setelah konseling berstatus Selesai
+  if(!konsSelesai(r)){ // voucher baru tersedia setelah sesi konseling selesai (status catatan terisi)
     $("#ketT").textContent="Voucher diskon "+VCH_DISKON+"%";$("#ketSub").textContent=String(r["Nama"]||"");
     $("#vchBox").hidden=true;$("#ketDl").hidden=true;$("#ketBody").hidden=false;
-    $("#ketBody").innerHTML='<p class="desc">Voucher tersedia setelah konseling peserta ini berstatus <b>Selesai</b>. Ubah status lewat ikon catatan di tabel, lalu buka lagi kolom Keterangan.</p>';
+    $("#ketBody").innerHTML='<p class="desc">Voucher tersedia setelah sesi konseling peserta ini selesai, yaitu saat <b>status catatan</b> sudah diisi (Selesai, Eskalasi, atau Risiko tinggi). Isi lewat ikon catatan di tabel, lalu buka lagi kolom Keterangan.</p>';
     $("#ket").showModal();return}
   const rows=adminData[kode]||[],no=Number(r["No Urut Voucher"])||(rows.filter(konsSelesai).indexOf(r)+1),vk=vchKode(no),tuju=kelas.find(x=>x.id===VCH_UNTUK);
   const berlaku=tglPanjang(tuju&&(tuju.harga.regulerSampai||tuju.tanggal));
@@ -684,7 +684,7 @@ async function bukaVoucher(kode,r){
   $("#ketBody").hidden=true;$("#vchBox").hidden=false;$("#vchBox").innerHTML='<span class="desc">Membuat voucher…</span>';$("#ket").showModal();
   const c=await gambarVoucher(r["Nama"],vk,berlaku);
   $("#vchBox").innerHTML="";$("#vchBox").appendChild(c);
-  const nt=document.createElement("div");nt.className="note";nt.textContent="Nomor urut ("+no+") = urutan konseling yang selesai. Nomor tetap dan tidak berubah.";$("#vchBox").appendChild(nt);
+  const nt=document.createElement("div");nt.className="note";nt.textContent="Nomor urut ("+no+") = urutan sesi konseling yang selesai. Nomor tetap dan tidak berubah.";$("#vchBox").appendChild(nt);
   const dl=$("#ketDl");dl.hidden=false;dl.onclick=()=>{const a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="voucher-"+vk+".png";document.body.appendChild(a);a.click();a.remove()}}
 $("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-ket]");if(b)bukaKet(b.dataset.ket)});
 $("#adminMain").addEventListener("change",async e=>{const c=e.target.closest(".serah-ck");if(!c)return;
@@ -722,7 +722,7 @@ $("#konsForm").addEventListener("submit",async e=>{e.preventDefault();
   try{
     if(!(adminPin===DEMO_PIN)){const r=await api({action:"konseling",pin:adminPin,kode:konsKode,id:konsRow["ID Daftar"],ke:konsRow["Peserta ke"],hasil,konselor:nama,status});if(!r.ok)throw new Error(r.error||"Gagal menyimpan");if(r.no)konsRow["No Urut Voucher"]=r.no}
     konsRow["Hasil Konseling"]=hasil;konsRow["Nama Konselor"]=nama;konsRow["Status Konseling"]=status;
-    if(status==="Selesai"&&!konsRow["No Urut Voucher"])konsRow["No Urut Voucher"]=Math.max(0,...(adminData[konsKode]||[]).map(x=>Number(x["No Urut Voucher"])||0))+1; // demo / server lama
+    if(status&&!konsRow["No Urut Voucher"])konsRow["No Urut Voucher"]=Math.max(0,...(adminData[konsKode]||[]).map(x=>Number(x["No Urut Voucher"])||0))+1; // demo / server lama
     $("#kons").close();renderAdmin()}
   catch(err){er.textContent="Gagal menyimpan: "+err.message;er.hidden=false}
   finally{b.disabled=false;b.textContent="Simpan"}});

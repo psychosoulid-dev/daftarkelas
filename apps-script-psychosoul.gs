@@ -79,9 +79,9 @@ function konseling(d) {
         sh.getRange(i + 1, cH + 1).setValue(safe(String(d.hasil || "").slice(0, 3000)));
         sh.getRange(i + 1, cN + 1).setValue(safe(String(d.konselor || "").slice(0, 120)));
         sh.getRange(i + 1, cS + 1).setValue(st);
-        // No urut voucher = urutan konseling selesai; diberikan sekali saat status jadi "Selesai" lalu tidak berubah
+        // No urut voucher = urutan sesi konseling selesai; diberikan sekali saat status catatan pertama kali diisi, lalu tidak berubah
         let no = Number(v[i][cV]) || 0;
-        if (st === "Selesai" && !no) {
+        if (st && !no) {   // status follow-up apa pun = sesi selesai
           no = v.slice(1).reduce((m, r) => Math.max(m, Number(r[cV]) || 0), 0) + 1;
           sh.getRange(i + 1, cV + 1).setValue(no);
         }
@@ -104,7 +104,7 @@ function voucherSerah(d) {
     const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cS = h.indexOf("Status Konseling"), cD = h.indexOf("Voucher Diserahkan");
     for (let i = 1; i < v.length; i++) {
       if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
-        if (d.serah && String(v[i][cS]) !== "Selesai") throw new Error("Konseling belum berstatus Selesai");
+        if (d.serah && String(v[i][cS]).trim() === "") throw new Error("Sesi konseling belum selesai (status catatan belum diisi)");
         const w = d.serah ? Utilities.formatDate(new Date(), "Asia/Jakarta", "dd MMM yyyy, HH.mm") : "";
         sh.getRange(i + 1, cD + 1).setValue(w);
         return { ok: true, waktu: w };
