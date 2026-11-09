@@ -574,9 +574,9 @@ const catCell=(k,r)=>`<button type="button" class="cat-btn ${ksClass(r)}" data-k
 function tabelPeserta(rows,k){
   if(!rows.length)return'<p class="desc">Belum ada pendaftar.</p>';
   const cat=pakaiPHQ(k);
-  return`<table class="ptbl"><thead><tr><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th></tr></thead><tbody>`+
-  rows.map(r=>{const w=pecahWaktu(r["Waktu"]);
-   return`<tr><td><span class="m">${esc(w.d)}</span><span class="fn">${esc(w.j)}</span></td>
+  return`<table class="ptbl"><thead><tr><th>No</th><th>Waktu</th><th>Nama</th><th>Alamat</th><th>Pekerjaan</th><th>Payment</th>${cat?"<th>Catatan</th>":""}<th>Keterangan</th></tr></thead><tbody>`+
+  rows.map((r,i)=>{const w=pecahWaktu(r["Waktu"]);
+   return`<tr><td>${i+1}</td><td><span class="m">${esc(w.d)}</span><span class="fn">${esc(w.j)}</span></td>
    <td><span class="m">${A(r,"Nama")}</span><span class="fn">${esc(String(r["Usia"]||"-"))} th / ${jkS(r["Jenis Kelamin"])}</span></td>
    <td>${A(r,"Alamat")}<span class="fn">${waLink(r["No WA"])}</span></td>
    <td><span class="m">${A(r,"Pekerjaan")}</span><span class="fn">${detailPeserta(r)}</span></td>
