@@ -202,6 +202,21 @@ function cekVoucher(ss, sh, kode) {
   return kv;
 }
 
+// ID pendaftaran. Jajan Curhat: regcurhat2611.001, .002, ... (nomor urut pendaftaran, bukan per peserta). Kelas lain: REG-tanggal-jam-acak.
+const ID_PREFIX = { "C11.3.26.03.1": "regcurhat2611." };
+function buatId(sh, kode) {
+  const pre = ID_PREFIX[kode];
+  if (!pre) return "REG-" + Utilities.formatDate(new Date(), "Asia/Jakarta", "yyMMdd-HHmmss") + "-" + Math.floor(100 + Math.random() * 900);
+  let maks = 0;
+  if (sh.getLastRow() > 1) {
+    const c = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].indexOf("ID Daftar");
+    if (c >= 0) sh.getRange(2, c + 1, sh.getLastRow() - 1, 1).getValues().forEach(r => {
+      const x = String(r[0]); if (x.indexOf(pre) === 0) maks = Math.max(maks, parseInt(x.slice(pre.length), 10) || 0);
+    });
+  }
+  return pre + ("00" + (maks + 1)).slice(-3);
+}
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
@@ -215,7 +230,7 @@ function daftar(d) {
       sh.getRange(1, 1, 1, HEAD.length).setFontWeight("bold");
     } else ensureHeader(sh);
     const kv = String(d.pembiayaan) === "voucher" ? cekVoucher(ss, sh, d.voucher) : "";
-    const id = "REG-" + Utilities.formatDate(new Date(), "Asia/Jakarta", "yyMMdd-HHmmss") + "-" + Math.floor(100 + Math.random() * 900);
+    const id = buatId(sh, kode);
     let link = "";
     if (d.bukti && d.bukti.data) {
       const blob = Utilities.newBlob(Utilities.base64Decode(d.bukti.data), d.bukti.mime || "image/jpeg",
