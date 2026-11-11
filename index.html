@@ -369,7 +369,7 @@ const tgl=s=>!s?"Soon":new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"2-di
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());
 const _old=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-/*SIMULASI*/const SIMULASI_BUKA=["C11.3.26.03.1"]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
+/*SIMULASI*/const SIMULASI_BUKA=[]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
 const belumBuka=k=>!SIMULASI_BUKA.includes(k.id)&&!!(k.harga.regulerMulai&&todayStr()<k.harga.regulerMulai); // pendaftaran dibuka mulai periode reguler mulai
 const ebAktif=k=>{const e=k.harga.earlybird,t=todayStr();return!!(e&&e.nominal!=null&&!belumBuka(k)&&(!e.sampai||t<=e.sampai)&&(!k.tanggal||t<=k.tanggal))};
 const perReg=k=>{const h=k.harga,t=todayStr();return(!h.regulerMulai||SIMULASI_BUKA.includes(k.id)||t>=h.regulerMulai)&&(!h.regulerSampai||t<=h.regulerSampai)&&(!k.tanggal||t<=k.tanggal)};
@@ -556,36 +556,16 @@ async function submit(file){
   finally{btn.disabled=false;btn.textContent="Kirim pendaftaran"}}
 
 /* ===== Admin: klik logo ===== */
-/*DEMO_START - data dummy simulasi admin. HAPUS blok ini sampai DEMO_END (dan 2 baris bertanda DEMO) bila sudah selesai */
-const DEMO_PIN="__demo-psychosoul__"; // PIN khusus mode demo (data dummy); bukan PIN admin asli
-const DEMO_SKIP_PIN=true; // true = klik logo langsung masuk admin (data dummy), tanpa kode login. Ubah ke false untuk meminta PIN lagi
-const DEMO_DATA=(()=>{
-  const bk="https://example.com/bukti-dummy.jpg",J="C11.3.26.03.1",R="C11.3.26.03.2";
-  const row=(kode,kelas,id,pemb,total,ke,w,nama,usia,jk,wa,alamat,st,bukti)=>({"Waktu":w,"ID Daftar":id,"Kode Kelas":kode,"Kelas":kelas,"Pembiayaan":pemb,"Total":total,"Peserta ke":ke,"Nama":nama,"Usia":usia,"Jenis Kelamin":jk,"No WA":wa,"Alamat":alamat,"Pekerjaan":"-","Jurusan":"","Semester":"","Tempat Pendidikan":"","Lama Praktik (thn)":"","Tempat Kerja":"","Bukti Bayar":bukti,"Status Bayar":st});
-  const jc="Jajan Curhat : Take a break, Let your mind awake",rf="Rreflektif & Creative Journaling";
-  return{
-    [J]:[
-      row(J,jc,"regcurhat2611.001","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
-      row(J,jc,"regcurhat2611.002","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
-      row(J,jc,"regcurhat2611.003","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Tidak sesuai",bk),
-      row(J,jc,"regcurhat2611.004","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"Tema Curhat":["Heart Talks","Career Crunch","","Social Circus"][i],"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Selesai","No Urut Voucher":1,"Voucher Diserahkan":"09 Nov 2026, 21.05","Dokumen SMART Goal":"demo"}:i===1?{"Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi","Status Konseling":"Eskalasi"}:i===2?{"Hasil Konseling":"Contoh: skor tinggi, segera dirujuk.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Risiko tinggi"}:{"Hasil Konseling":"Draft: sesi berlangsung, ringkasan belum final.","Nama Konselor":"Vira Zahra Athirah, S.Psi"})}}),
-    [R]:[
-      row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
-      row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
-      row(R,rf,"REG-261109-090500-202","paket",357000,2,"09 Nov 2026 09:05","Gita Safitri (DUMMY)",29,"Perempuan","081200000007","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
-      row(R,rf,"REG-261109-090500-202","paket",357000,3,"09 Nov 2026 09:05","Hendra Wijaya (DUMMY)",31,"Laki-laki","081200000008","Kotagede, Yogyakarta","Menunggu verifikasi",bk)].map((r,i)=>i===0?{...r,"Status Konseling":"Selesai","Hasil Konseling":"Contoh: sesi refleksi berjalan baik.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog"}:i===1?{...r,"Status Konseling":"Eskalasi","Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi"}:r)}})();
-/*DEMO_END*/
+const DEMO_PIN="__nonaktif__",DEMO_DATA={};
 let adminPin=null,adminData={},adminOn=false;const openAcc=new Set();
 function setAdmin(on){adminOn=on;$("#scroll").hidden=on;$("#adminScroll").hidden=!on;$("#filters").hidden=on;
   document.title=on?"Admin – Psychosoul":"Daftar Kelas – Layanan Psikologi Psychosoul";if(on)renderAdmin();else adminPin=null}
 function logoClick(){if(adminOn){setAdmin(false);return}
-  if(typeof DEMO_SKIP_PIN!=="undefined"&&DEMO_SKIP_PIN){adminPin=DEMO_PIN;adminData=DEMO_DATA;setAdmin(true);return} // DEMO
   $("#pinIn").value="";$("#pinErr").hidden=true;$("#pin").showModal();$("#pinIn").focus()}
 $("#logoBtn").addEventListener("click",logoClick);
 $("#logoBtn").addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();logoClick()}});
 $("#pinX").addEventListener("click",()=>$("#pin").close());$("#pinCancel").addEventListener("click",()=>$("#pin").close());
 async function muatAdmin(pin){
-  if(typeof DEMO_PIN!=="undefined"&&pin===DEMO_PIN){adminPin=pin;adminData=DEMO_DATA;return} // DEMO
   if(!API_URL)throw new Error("API_URL belum diisi");
   const r=await api({action:"admin",pin});if(!r.ok)throw new Error(r.error||"Gagal");
   adminPin=pin;adminData=r.data||{}}
@@ -681,7 +661,7 @@ function tampilTiket(r,kode,st){
   $("#byrT").textContent="Etiket konfirmasi";
   box.hidden=false;$("#byrMain").hidden=true;$("#byrFootV").hidden=true;$("#byrFootT").hidden=false}
 function tampilVerif(){$("#byrT").textContent="Bukti pembayaran";$("#byrTicket").hidden=true;$("#byrMain").hidden=false;$("#byrFootV").hidden=false;$("#byrFootT").hidden=true}
-const DEMO_BUKTI='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="220"><rect width="360" height="220" fill="#EDF4FA"/><text x="180" y="100" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#0E4A86">Contoh bukti transfer</text><text x="180" y="126" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#55667F">(data dummy)</text></svg>');
+const DEMO_BUKTI="";
 function driveId(u){const m=String(u||"").match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/);return m?(m[1]||m[2]):""}
 async function bukaByr(key){
   const [kode,id,ke]=key.split("|"),rows=adminData[kode]||[];
@@ -728,7 +708,7 @@ function bukaKet(key){
   $("#ketBody").innerHTML=kv.filter(x=>x[1]!==undefined&&x[1]!==null&&String(x[1]).trim()!=="").map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("");
   $("#ket").showModal()}
 /* ===== Dokumen SMART Goal (Jajan Curhat): diunggah konselor, dipreview/diunduh admin ===== */
-const demoSmart={"C11.3.26.03.1|regcurhat2611.001|1":{name:"SMART-Goal-Aulia.pdf",mime:"application/pdf",dataUrl:"data:application/pdf;base64,JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2JqCjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2JqCjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA0MjAgMjQwXSAvQ29udGVudHMgNCAwIFIgL1Jlc291cmNlcyA8PCAvRm9udCA8PCAvRjEgNSAwIFIgPj4gPj4gPj4KZW5kb2JqCjQgMCBvYmoKPDwgL0xlbmd0aCAxNzMgPj4Kc3RyZWFtCkJUIC9GMSAxOCBUZiAzMCAxOTAgVGQgKFNNQVJUIEdvYWwgLSBjb250b2ggZG9rdW1lbiBkZW1vKSBUaiAwIC0zMCBUZCAvRjEgMTIgVGYgKFM6IFNwZXNpZmlrICBNOiBUZXJ1a3VyICBBOiBEYXBhdCBkaWNhcGFpKSBUaiAwIC0yMCBUZCAoUjogUmVsZXZhbiAgVDogQmVyYmF0YXMgd2FrdHUpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAvVHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAwMDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDI0MSAwMDAwMCBuIAowMDAwMDAwNDY1IDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhyZWYKNTM1CiUlRU9GCg=="}}; // contoh dokumen demo untuk peserta pertama Jajan Curhat
+const demoSmart={};
 let smartCache=null,smartKey="";
 const SMART_MAX=5*1024*1024,SMART_EXT=/\.(pdf|docx?|jpe?g|png)$/i;
 function smartReset(){$("#smartBox").hidden=true;$("#smartView").hidden=true;$("#smartView").innerHTML="";if(smartCache&&smartCache.url)URL.revokeObjectURL(smartCache.url);smartCache=null;smartKey=""}
