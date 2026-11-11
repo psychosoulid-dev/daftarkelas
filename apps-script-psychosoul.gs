@@ -220,9 +220,13 @@ function buatId(sh, kode) {
   return pre + ("00" + (maks + 1)).slice(-3);
 }
 
+// Jam buka pendaftaran per kode kelas (WIB). Sebelum waktu ini, server menolak pendaftaran. Kosongkan/hapus entri bila tidak dipakai.
+const BUKA_JAM = { "C11.3.26.03.1": "2026-11-14T13:00:00+07:00" };
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
+  if (BUKA_JAM[kode] && Date.now() < Date.parse(BUKA_JAM[kode])) throw new Error("Pendaftaran belum dibuka. Silakan coba lagi sesuai jadwal pembukaan.");
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const ss = SpreadsheetApp.openById(SS_ID);

@@ -370,9 +370,12 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());
 const _old=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 /*SIMULASI*/const SIMULASI_BUKA=[]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
-const belumBuka=k=>!SIMULASI_BUKA.includes(k.id)&&!!(k.harga.regulerMulai&&todayStr()<k.harga.regulerMulai); // pendaftaran dibuka mulai periode reguler mulai
+const BUKA_JAM={"C11.3.26.03.1":"2026-11-14T13:00:00+07:00"}; // jam buka pendaftaran (WIB) per kelas; menimpa jam 00.00 dari tanggal di sheet
+const bukaJam=k=>BUKA_JAM[k.id]?Date.parse(BUKA_JAM[k.id]):0;
+const bukaTxt=k=>tglB(k.harga.regulerMulai)+(bukaJam(k)?", "+new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(bukaJam(k)).replace(":",".")+" WIB":"");
+const belumBuka=k=>!SIMULASI_BUKA.includes(k.id)&&(!!(bukaJam(k)&&Date.now()<bukaJam(k))||!!(k.harga.regulerMulai&&todayStr()<k.harga.regulerMulai)); // pendaftaran dibuka mulai periode reguler mulai (atau jam khusus di BUKA_JAM)
 const ebAktif=k=>{const e=k.harga.earlybird,t=todayStr();return!!(e&&e.nominal!=null&&!belumBuka(k)&&(!e.sampai||t<=e.sampai)&&(!k.tanggal||t<=k.tanggal))};
-const perReg=k=>{const h=k.harga,t=todayStr();return(!h.regulerMulai||SIMULASI_BUKA.includes(k.id)||t>=h.regulerMulai)&&(!h.regulerSampai||t<=h.regulerSampai)&&(!k.tanggal||t<=k.tanggal)};
+const perReg=k=>{const h=k.harga,t=todayStr();return!belumBuka(k)&&(!h.regulerMulai||SIMULASI_BUKA.includes(k.id)||t>=h.regulerMulai)&&(!h.regulerSampai||t<=h.regulerSampai)&&(!k.tanggal||t<=k.tanggal)};
 const regAktif=k=>k.harga.reguler!=null&&perReg(k);
 
 /* daftar kelas */
@@ -408,11 +411,11 @@ const tglB=s=>!s?"segera diumumkan":new Intl.DateTimeFormat("id-ID",{day:"2-digi
 function biayaHTML(k){
   const r=[],hg=k.harga,t=todayStr(),row=(pr,fn)=>`<div class="pr">${pr}<span class="fn">${fn}</span></div>`;
   if(hg.reguler!=null){
-    const fn=belumBuka(k)?"dibuka "+tglB(hg.regulerMulai):(hg.regulerSampai||k.tanggal)?"sampai "+tglB(hg.regulerSampai||k.tanggal):"";
+    const fn=belumBuka(k)?"dibuka "+bukaTxt(k):(hg.regulerSampai||k.tanggal)?"sampai "+tglB(hg.regulerSampai||k.tanggal):"";
     r.push(row(`<span class="price">${rp(hg.reguler)}</span>`,"Reguler"+(fn?" · "+fn:"")))}
   if(hg.paket)r.push(row(`<span class="price">${rp(hg.paket.nominal)}</span>`,"Paket · "+esc(hg.paket.ket)));
   if(hg.earlybird&&hg.earlybird.nominal!=null){const on=ebAktif(k),sp=hg.earlybird.sampai;
-    const fn=on?(sp?"sampai "+tglB(sp):k.tanggal?"tersedia":"segera diumumkan"):belumBuka(k)?"dibuka "+tglB(hg.regulerMulai):"berakhir"+(sp?" "+tglB(sp):"");
+    const fn=on?(sp?"sampai "+tglB(sp):k.tanggal?"tersedia":"segera diumumkan"):belumBuka(k)?"dibuka "+bukaTxt(k):"berakhir"+(sp?" "+tglB(sp):"");
     r.push(row(`<span class="price eb ${on||belumBuka(k)?"":"off"}">${rp(hg.earlybird.nominal)}</span>`,`Early bird · ${fn}`))}
   return r.length?r.join(""):'<span class="fn">Biaya segera diumumkan</span>'}
 $("#filters").addEventListener("click",e=>{const b=e.target.closest(".chip");if(!b)return;const v=b.dataset.s;aktif.has(v)?aktif.delete(v):aktif.add(v);renderFilters();renderList()});
@@ -433,8 +436,8 @@ $("#infoClose").addEventListener("click",()=>$("#info").close());$("#infoClose2"
 const dlg=$("#dlg");let K=null,step=1,biaya=null,jumlah=1;
 const secs=["#s1","#s2","#s3"];
 function paketList(k){const l=[],hg=k.harga,pr=perReg(k);
-  const note=hg.regulerMulai&&todayStr()<hg.regulerMulai?` (dibuka ${tgl(hg.regulerMulai)})`:" (periode berakhir)";
-  if(hg.earlybird&&hg.earlybird.nominal!=null){const on=ebAktif(k);l.push({v:"earlybird",label:"Earlybird"+(on?(hg.earlybird.sampai?` (sampai ${tgl(hg.earlybird.sampai)})`:""):belumBuka(k)?` (dibuka ${tgl(hg.regulerMulai)})`:" (periode berakhir)"),nominal:hg.earlybird.nominal,jumlah:1,disabled:!on})}
+  const note=belumBuka(k)?` (dibuka ${bukaTxt(k)})`:" (periode berakhir)";
+  if(hg.earlybird&&hg.earlybird.nominal!=null){const on=ebAktif(k);l.push({v:"earlybird",label:"Earlybird"+(on?(hg.earlybird.sampai?` (sampai ${tgl(hg.earlybird.sampai)})`:""):belumBuka(k)?` (dibuka ${bukaTxt(k)})`:" (periode berakhir)"),nominal:hg.earlybird.nominal,jumlah:1,disabled:!on})}
   if(hg.reguler!=null)l.push({v:"reguler",label:"Reguler"+(pr?"":note),nominal:hg.reguler,jumlah:1,disabled:!pr});
   if(hg.reguler!=null&&k.id===VCH_UNTUK)l.push({v:"voucher",label:`Voucher ${VCH_DISKON}% (dari harga Reguler)`+(pr?"":note),nominal:Math.round(hg.reguler*(100-VCH_DISKON)/100),jumlah:1,disabled:!pr});
   if(hg.paket)l.push({v:"paket",label:`Paket ${hg.paket.jumlah} peserta`+(pr?"":note),nominal:hg.paket.nominal,jumlah:hg.paket.jumlah,disabled:!pr});
@@ -859,7 +862,7 @@ $("#adminMain").addEventListener("click",async e=>{
   try{await Promise.all([muatAdmin(adminPin),loadKelas(true)])}catch(err){alert("Gagal memuat: "+err.message)}
   renderAdmin()});
 
-renderFilters();loadKelas();setInterval(()=>loadKelas(true),300000); // muat ulang tiap 5 menit
+renderFilters();loadKelas();setInterval(()=>loadKelas(true),300000);setInterval(()=>{try{if(!adminOn&&!document.querySelector("dialog[open]"))renderList()}catch(e){}},30000); // muat ulang tiap 5 menit
 
 /* jam realtime WIB: dddd, dd mmmm yyyy - hh:mm WIB */
 const clockFmt=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",weekday:"long",day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
