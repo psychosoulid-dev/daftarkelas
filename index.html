@@ -473,7 +473,7 @@ function pesertaHTML(i){
    <div class="field"><span class="lb">Jenis kelamin</span><div class="opts">
     <label><input type="radio" name="${n}jk" value="Laki-laki" required> Laki-laki</label>
     <label><input type="radio" name="${n}jk" value="Perempuan"> Perempuan</label></div></div></div>
-  <div class="field"><label for="${n}wa">No. WhatsApp</label><input type="tel" id="${n}wa" name="${n}wa" inputmode="tel" pattern="[0-9+\\s\\-]{9,16}" placeholder="08xxxxxxxxxx" required></div>
+  <div class="field"><label for="${n}wa">No. WhatsApp</label><input type="tel" id="${n}wa" name="${n}wa" inputmode="tel" pattern="[0-9+\\s\\-]{9,16}" placeholder="08xxxxxxxxxx" required>${pakaiPHQ(K)?'<div class="note">Informasi antrian melalui no WA.</div>':""}</div>
   <div class="field"><label for="${n}alamat">Alamat</label><textarea id="${n}alamat" name="${n}alamat" rows="2" required></textarea></div>
   ${tem?`<div class="field"><span class="lb">Pekerjaan</span><div class="opts">
     <label><input type="radio" name="${n}kerja" value="mahasiswa" required> Mahasiswa</label>
