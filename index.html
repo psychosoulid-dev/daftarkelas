@@ -96,8 +96,8 @@ legend{padding:0 6px;font-family:'Bricolage Grotesque',sans-serif}
 .resume div:last-child{border:0}
 .resume span{color:var(--muted)}
 .resume b{text-align:right}
-.pay{display:grid;grid-template-columns:1fr 200px;gap:14px;align-items:center;background:var(--bg);border-radius:12px;padding:14px;margin-bottom:14px}
-.qr{width:200px;height:200px;background:#fff;border:1px dashed var(--muted);border-radius:10px;display:grid;place-items:center;text-align:center;font-size:.75rem;color:var(--muted);overflow:hidden}
+.pay{display:grid;grid-template-columns:minmax(0,.8fr) 230px;gap:14px;align-items:center;background:var(--bg);border-radius:12px;padding:14px;margin-bottom:14px}
+.pay>div:first-child{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:.8rem;line-height:1.4}.pay>div:first-child .val,.pay>div:first-child .label,.pay>div:first-child .note{font-size:.8rem}.qr{width:230px;height:230px;justify-self:end;background:#fff;border:1px dashed var(--muted);border-radius:10px;display:grid;place-items:center;text-align:center;font-size:.75rem;color:var(--muted);overflow:hidden}
 .qr a{display:block;width:100%;height:100%}.qr img{width:100%;height:100%;object-fit:contain}
 .err{color:var(--err);font-size:.85rem;margin-top:4px}
 .ok{text-align:center;padding:18px 0}
@@ -459,7 +459,7 @@ const pakaiPHQ=k=>PHQ4_KELAS.includes(k.id)||/jajan curhat/i.test(k.nama||"");
 const PHQ_ITEMS=["Merasa gugup, cemas, atau tegang","Tidak dapat menghentikan atau mengendalikan rasa khawatir","Kurang berminat atau kurang menikmati dalam melakukan sesuatu","Merasa sedih, murung, atau putus asa"];
 const PHQ_OPSI=["Tidak sama sekali","Beberapa hari","Lebih dari separuh hari","Hampir setiap hari"];
 function phqHTML(n){
-  return `<div class="phq"><h3>Skrining PHQ-4</h3>
+  return `<div class="phq"><h3>Cek kondisi anda</h3>
   <div class="note">Selama <b>2 minggu terakhir</b>, seberapa sering kamu terganggu oleh masalah-masalah berikut?</div>
   ${PHQ_ITEMS.map((t,q)=>`<div class="q" role="group" aria-label="${esc(t)}"><span class="lb">${q+1}. ${esc(t)}</span><div class="opts">${PHQ_OPSI.map((o,v)=>`<label><input type="radio" name="${n}phq${q+1}" value="${v}" ${v===0?"required":""}> ${o}</label>`).join("")}</div></div>`).join("")}
   <div class="note" style="padding:8px 0">Skrining singkat ini hanya membantu tim Psychosoul memahami kondisimu dan bukan diagnosis. Jika kamu merasa sangat tertekan, segera hubungi admin atau orang terdekat.</div></div>`}
