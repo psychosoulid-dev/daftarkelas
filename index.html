@@ -143,6 +143,11 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .pay-btn{font:inherit;border:0;background:none;padding:0;text-align:left;cursor:pointer;color:var(--ink)}.pay-btn b{display:block;text-decoration:underline dotted;text-underline-offset:3px}.pay-btn small{display:block;font-size:.75rem}
 .pay-ok,.pay-ok small{color:#1B7F3B}.pay-bad,.pay-bad small{color:#C62828}.pay-wait small{color:var(--muted)}
 .bukti-box{background:var(--bg);border-radius:12px;min-height:160px;display:grid;place-items:center;overflow:hidden;margin:8px 0 12px}.bukti-box img{max-width:100%;max-height:52vh;display:block}
+.tiket{border:1.5px dashed var(--teal);border-radius:14px;overflow:hidden;background:#fff}.tiket.bad{border-color:#C62828}
+.tiket .th{background:var(--teal);color:#fff;padding:12px 14px;display:flex;align-items:center;gap:10px}.tiket.bad .th{background:#C62828}.tiket .th b{font-family:'Bricolage Grotesque',sans-serif;font-size:1.05rem}.tiket .th small{display:block;opacity:.9;font-size:.78rem}
+.tiket .tb{padding:12px 14px;display:grid;gap:12px}.tiket h4{margin:0 0 4px;font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.tiket dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 12px;font-size:.9rem}.tiket dt{color:var(--muted)}.tiket dd{margin:0;font-weight:600;min-width:0;overflow-wrap:anywhere}
+.tiket .antri{text-align:center;background:var(--teal-soft);border-radius:10px;padding:8px}.tiket .antri span{display:block;font-size:.75rem;color:var(--muted)}.tiket .antri b{font-family:'Bricolage Grotesque',sans-serif;font-size:2rem;color:var(--teal);line-height:1.1}
+.tiket .pesan{font-size:.95rem;line-height:1.5}
 .btn.setuju{background:#1B7F3B}.btn.setuju:hover{background:#14652E}.btn.bad{background:#fff;color:#C62828;border:1px solid #C62828}.btn.bad:hover{background:#FDECEA}
 .serah{display:flex;align-items:center;justify-content:center}.serah-ck{width:20px;height:20px;accent-color:var(--teal);cursor:pointer;margin:0}.serah-ck:disabled{cursor:not-allowed;opacity:.4}
 .ptbl{border-collapse:collapse;width:100%;font-size:.85rem;min-width:720px}.ptbl th,.ptbl td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}.ptbl th{color:var(--muted);font-weight:600;white-space:nowrap}
@@ -183,12 +188,16 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 <form method="dialog" id="byrForm">
   <div class="m-head"><div><h2 id="byrT">Bukti pembayaran</h2><div class="desc" id="byrSub"></div></div><button type="button" class="x" id="byrX" aria-label="Tutup">&times;</button></div>
   <div class="m-body">
+    <div id="byrTicket" hidden></div>
+    <div id="byrMain">
     <div class="phq-sum" id="byrInfo"></div>
     <div class="bukti-box" id="byrImg"></div>
     <div class="note" id="byrNote"></div>
     <div class="err" id="byrErr" hidden></div>
+    </div>
   </div>
-  <div class="m-foot"><button type="button" class="btn bad" id="byrBad">Tidak sesuai</button><button type="button" class="btn setuju" id="byrOk">Sesuai</button></div>
+  <div class="m-foot" id="byrFootV"><button type="button" class="btn bad" id="byrBad">Tidak sesuai</button><button type="button" class="btn setuju" id="byrOk">Sesuai</button></div>
+  <div class="m-foot" id="byrFootT" hidden><button type="button" class="btn ghost" id="byrUbah">Lihat bukti / ubah</button><a class="btn setuju" id="byrWa" target="_blank" rel="noopener">Kirim ke WhatsApp klien</a></div>
 </form></dialog>
 <dialog id="ket" aria-labelledby="ketT">
   <div class="m-head"><div><h2 id="ketT">Keterangan</h2><div class="desc" id="ketSub"></div></div><button type="button" class="x" id="ketX" aria-label="Tutup">&times;</button></div>
@@ -646,7 +655,31 @@ function renderAdmin(){
   (on.length?on.map(k=>{const rows=adminData[k.id]||[];
     return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span></summary><div class="acc-b">${tabelPeserta(rows,k)}</div></details>`}).join("")
    :'<div class="empty">Belum ada kelas/event dengan status On going.</div>')}
-let byrRow=null,byrKode=null;
+let byrRow=null,byrKode=null,byrTicketTxt="";
+const noAntri=r=>{const m=String(r["ID Daftar"]||"").match(/\.(\d+)$/);return m?m[1]:""};
+function tampilTiket(r,kode,st){
+  const k=kelas.find(x=>x.id===kode)||{},ant=noAntri(r),sudah=st==="ok",
+    jadwal=k.tanggal?tgl(k.tanggal)+(k.jam&&k.jam!=="Soon"?", "+jamTxt(k.jam):""):"Soon";
+  const nm=esc(r["Nama"]||""),box=$("#byrTicket");
+  if(sudah){
+    box.innerHTML=`<div class="tiket"><div class="th"><div><b>Payment diterima</b><small>Konfirmasi pembayaran · Psychosoul</small></div></div><div class="tb">
+    ${ant?`<div class="antri"><span>No. antrian</span><b>${esc(ant)}</b></div>`:""}
+    <div><h4>Data klien</h4><dl><dt>Nama</dt><dd>${nm}</dd><dt>Usia</dt><dd>${esc(r["Usia"]||"-")}</dd><dt>No. WA</dt><dd>${esc(r["No WA"]||"-")}</dd><dt>ID daftar</dt><dd>${esc(r["ID Daftar"]||"-")}</dd></dl></div>
+    <div><h4>Data kelas</h4><dl><dt>Kelas</dt><dd>${esc(r["Kelas"]||k.nama||"")}</dd><dt>Jadwal</dt><dd>${esc(jadwal)}</dd><dt>Tempat</dt><dd>${esc(k.tempat||"-")}</dd><dt>Pembayaran</dt><dd>${rp(Number(r["Total"])||0)} · ${esc(jenisLabel(r["Pembiayaan"]))}</dd></dl></div>
+    </div></div>`;
+    byrTicketTxt=`Halo ${r["Nama"]||""}, pembayaranmu untuk kelas ${r["Kelas"]||k.nama||""} sudah kami terima.\n\nJadwal: ${jadwal}\nTempat: ${k.tempat||"-"}\n${ant?"No. antrian: "+ant+"\n":""}ID daftar: ${r["ID Daftar"]||"-"}\n\nSampai jumpa! – Psychosoul`}
+  else{
+    box.innerHTML=`<div class="tiket bad"><div class="th"><div><b>Payment tidak sesuai</b><small>Konfirmasi pembayaran · Psychosoul</small></div></div><div class="tb">
+    <p class="pesan" style="margin:0">Bukti pembayaran yang kamu kirim belum sesuai. Silakan menghubungi <b>Minsoul</b> (WA ${esc(WA_NUMBER)}) untuk bantuan.</p>
+    <div><h4>Data klien</h4><dl><dt>Nama</dt><dd>${nm}</dd><dt>No. WA</dt><dd>${esc(r["No WA"]||"-")}</dd><dt>ID daftar</dt><dd>${esc(r["ID Daftar"]||"-")}</dd></dl></div>
+    <div><h4>Data kelas</h4><dl><dt>Kelas</dt><dd>${esc(r["Kelas"]||k.nama||"")}</dd><dt>Jadwal</dt><dd>${esc(jadwal)}</dd></dl></div>
+    </div></div>`;
+    byrTicketTxt=`Halo ${r["Nama"]||""}, bukti pembayaran untuk kelas ${r["Kelas"]||k.nama||""} (ID daftar ${r["ID Daftar"]||"-"}) belum sesuai. Silakan menghubungi Minsoul di WA ${WA_NUMBER} untuk bantuan. – Psychosoul`}
+  const n=String(r["No WA"]||"").replace(/[^\d]/g,"").replace(/^0/,"62");
+  $("#byrWa").href=`https://wa.me/${n}?text=${encodeURIComponent(byrTicketTxt)}`;
+  $("#byrT").textContent="Etiket konfirmasi";
+  box.hidden=false;$("#byrMain").hidden=true;$("#byrFootV").hidden=true;$("#byrFootT").hidden=false}
+function tampilVerif(){$("#byrT").textContent="Bukti pembayaran";$("#byrTicket").hidden=true;$("#byrMain").hidden=false;$("#byrFootV").hidden=false;$("#byrFootT").hidden=true}
 const DEMO_BUKTI='data:image/svg+xml;utf8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="220"><rect width="360" height="220" fill="#EDF4FA"/><text x="180" y="100" text-anchor="middle" font-family="sans-serif" font-size="18" fill="#0E4A86">Contoh bukti transfer</text><text x="180" y="126" text-anchor="middle" font-family="sans-serif" font-size="13" fill="#55667F">(data dummy)</text></svg>');
 function driveId(u){const m=String(u||"").match(/\/d\/([\w-]+)|[?&]id=([\w-]+)/);return m?(m[1]||m[2]):""}
 async function bukaByr(key){
@@ -657,7 +690,9 @@ async function bukaByr(key){
   $("#byrSub").textContent=String(r["Nama"]||"")+" · "+String(r["Kelas"]||"");
   $("#byrInfo").innerHTML=`<span>Nominal: <b>${tot}</b></span><span>Pembiayaan: <b>${esc(jenisLabel(r["Pembiayaan"]))}</b></span><span>Status: <b class="pay-${st}">${stLabel[st]}</b></span>`;
   $("#byrNote").textContent=/paket/i.test(r["Pembiayaan"]||"")?"Paket: verifikasi berlaku untuk semua peserta dalam pendaftaran yang sama.":"";
-  $("#byrErr").hidden=true;$("#byrImg").innerHTML='<span class="desc">Memuat bukti…</span>';$("#byr").showModal();
+  $("#byrErr").hidden=true;$("#byrImg").innerHTML='<span class="desc">Memuat bukti…</span>';
+  if(st==="ok"||st==="bad")tampilTiket(r,kode,st);else tampilVerif();
+  $("#byr").showModal();
   const u=String(r["Bukti Bayar"]||"");
   if(!u.startsWith("https://")){$("#byrImg").innerHTML='<span class="desc">Belum ada bukti pembayaran.</span>';return}
   try{
@@ -670,12 +705,13 @@ async function setVerif(status){
   try{
     if(adminPin!==DEMO_PIN){const r=await api({action:"verifikasi",pin:adminPin,kode:byrKode,id:byrRow["ID Daftar"],status});if(!r.ok)throw new Error(r.error||"Gagal menyimpan")}
     (adminData[byrKode]||[]).forEach(x=>{if(String(x["ID Daftar"])===String(byrRow["ID Daftar"]))x["Status Bayar"]=status});
-    $("#byr").close();renderAdmin()}
+    renderAdmin();tampilTiket(byrRow,byrKode,status==="Sesuai"?"ok":"bad")}
   catch(err){er.textContent="Gagal menyimpan: "+err.message;er.hidden=false}
   finally{bs.forEach(b=>b.disabled=false)}}
 $("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-pay]");if(b)bukaByr(b.dataset.pay)});
 $("#byrOk").addEventListener("click",()=>setVerif("Sesuai"));$("#byrBad").addEventListener("click",()=>setVerif("Tidak sesuai"));
 $("#byrX").addEventListener("click",()=>$("#byr").close());
+$("#byrUbah").addEventListener("click",tampilVerif);
 function bukaKet(key){
   const [kode,id,ke]=key.split("|"),r=(adminData[kode]||[]).find(x=>String(x["ID Daftar"])===id&&String(x["Peserta ke"])===ke);if(!r)return;
   $("#ketT").textContent="Keterangan";$("#ketBody").hidden=false;$("#vchBox").hidden=true;$("#ketDl").hidden=true;
