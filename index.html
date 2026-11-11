@@ -359,7 +359,7 @@ const tgl=s=>!s?"Soon":new Intl.DateTimeFormat("id-ID",{weekday:"long",day:"2-di
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());
 const _old=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
-/*SIMULASI*/const SIMULASI_BUKA=[]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
+/*SIMULASI*/const SIMULASI_BUKA=["C11.3.26.03.1"]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
 const belumBuka=k=>!SIMULASI_BUKA.includes(k.id)&&!!(k.harga.regulerMulai&&todayStr()<k.harga.regulerMulai); // pendaftaran dibuka mulai periode reguler mulai
 const ebAktif=k=>{const e=k.harga.earlybird,t=todayStr();return!!(e&&e.nominal!=null&&!belumBuka(k)&&(!e.sampai||t<=e.sampai)&&(!k.tanggal||t<=k.tanggal))};
 const perReg=k=>{const h=k.harga,t=todayStr();return(!h.regulerMulai||SIMULASI_BUKA.includes(k.id)||t>=h.regulerMulai)&&(!h.regulerSampai||t<=h.regulerSampai)&&(!k.tanggal||t<=k.tanggal)};
