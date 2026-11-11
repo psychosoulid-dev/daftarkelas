@@ -222,7 +222,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
     <div class="draftbar" id="konsDraft" hidden>Draft: status belum dipilih. Isian dan dokumen tetap tersimpan, tidak hilang. Sesi baru dianggap selesai setelah status dipilih.</div>
     <div class="err" id="konsErr" hidden></div>
   </div>
-  <div class="m-foot"><button type="button" class="btn ghost" id="konsCancel">Tutup</button><button type="submit" class="btn" id="konsGo">Simpan</button></div>
+  <div class="m-foot"><button type="button" class="btn ghost" id="konsCancel">Tutup</button><button type="button" class="btn ghost" id="konsDoc" title="Unduh catatan sebagai dokumen Word">Unduh dokumen</button><button type="submit" class="btn" id="konsGo">Simpan</button></div>
 </form></dialog>
 <dialog id="pin" aria-labelledby="pinT" style="width:min(380px,calc(100% - 24px))">
 <form id="pinForm">
@@ -831,6 +831,30 @@ function bukaKons(key){
     if(d&&(d.hasil!==$("#konsHasil").value||d.nama!==$("#konsNama").value||d.status!==$("#konsStatus").value||(d.tema||"")!==$("#konsTema").value)){$("#konsTema").value=d.tema||"";$("#konsHasil").value=d.hasil;$("#konsNama").value=d.nama;$("#konsStatus").value=d.status;pulih=true}}catch(e){}
   konsUI();if(pulih){$("#konsSmartInfo").textContent+=" · Isian yang belum disimpan dipulihkan dari draf di perangkat ini."}
   $("#konsErr").hidden=true;$("#kons").showModal()}
+
+// Unduh catatan sebagai dokumen Word (.doc, HTML yang dibuka Word/Google Docs). Memakai isian yang sedang tampil di form.
+function konsDokumen(){
+  const r=konsRow;if(!r)return;
+  const nl=t=>esc(String(t||"")).replace(/\n/g,"<br>");
+  const row=(a,b)=>`<tr><td style="width:32%;padding:4px 8px;border:1px solid #bbb;background:#f3f6f4"><b>${a}</b></td><td style="padding:4px 8px;border:1px solid #bbb">${b||"-"}</td></tr>`;
+  let phq="";
+  if(adaPHQrow(r)){
+    const a=String(r["PHQ-4 Jawaban"]||"").split(",").map(Number),T=Number(r["PHQ-4 Total"]),c=Number(r["PHQ-4 Cemas"]),d=Number(r["PHQ-4 Depresi"]),kl=phqKat(T)[1];
+    phq=`<h3>Hasil PHQ-4</h3><table style="border-collapse:collapse;width:100%">${PHQ_ITEMS.map((t,i)=>`<tr><td style="padding:3px 8px;border:1px solid #bbb">${i+1}. ${esc(t)}</td><td style="padding:3px 8px;border:1px solid #bbb;width:30%">${esc(PHQ_OPSI[a[i]]||"-")} (${isNaN(a[i])?"-":a[i]})</td></tr>`).join("")}</table>
+    <p>Total: <b>${T}/12</b> (${kl}) &nbsp;|&nbsp; Cemas (butir 1–2): <b>${c}</b>${c>=3?" (positif)":""} &nbsp;|&nbsp; Depresi (butir 3–4): <b>${d}</b>${d>=3?" (positif)":""}</p>
+    <p style="font-size:9pt;color:#555">Skor 3 atau lebih pada subskala Cemas atau Depresi menandakan perlu penelusuran lebih lanjut. PHQ-4 adalah skrining, bukan diagnosis.</p>`}
+  const jc=VCH_KELAS.includes(konsKode),adaDok=String(r["Dokumen SMART Goal"]||"").trim()!=="";
+  const tgl=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"full",timeStyle:"short"}).format(new Date());
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Catatan Konseling</title>
+  <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt}h1{font-size:16pt;margin:0}h3{font-size:12pt;margin:14px 0 4px}</style></head><body>
+  <h1>Catatan Konseling</h1><p style="margin:0;color:#555">Layanan Psikologi &amp; Hipnoterapi Psychosoul</p><hr>
+  <table style="border-collapse:collapse;width:100%">${row("Nama",esc(r["Nama"]))}${row("ID daftar",esc(r["ID Daftar"]))}${row("Kelas",esc(r["Kelas"]))}${jc?row("Tema curhat",esc($("#konsTema").value)):""}${row("Status konseling",esc($("#konsStatus").value||"Belum ditentukan"))}${row("Nama konselor",esc($("#konsNama").value))}${jc?row("Dokumen SMART Goal",adaDok?"Tersimpan di sistem":"Belum ada"):""}</table>
+  ${phq}<h3>Hasil konseling</h3><p>${nl($("#konsHasil").value)||"-"}</p>
+  <hr><p style="font-size:9pt;color:#555">Dokumen rahasia, hanya untuk keperluan internal layanan. Dibuat ${esc(tgl)} WIB.</p></body></html>`;
+  const nm=String(r["Nama"]||"peserta").replace(/[^\w\-]+/g,"_").slice(0,40),id=String(r["ID Daftar"]||"").replace(/[^\w.\-]+/g,"_");
+  const u=URL.createObjectURL(new Blob(["\ufeff"+html],{type:"application/msword"})),a=document.createElement("a");
+  a.href=u;a.download=`Catatan-${id}-${nm}.doc`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000)}
+$("#konsDoc").addEventListener("click",konsDokumen);
 const konsDraftKey=()=>"psychosoul-kons:"+konsKode+"|"+(konsRow&&konsRow["ID Daftar"])+"|"+(konsRow&&konsRow["Peserta ke"]);
 function konsUI(){const st=$("#konsStatus").value,adaDok=konsRow&&String(konsRow["Dokumen SMART Goal"]||"").trim()!=="";
   const isi=$("#konsHasil").value.trim()||$("#konsTema").value||$("#konsNama").value.trim()||$("#konsSmart").files.length||adaDok;
