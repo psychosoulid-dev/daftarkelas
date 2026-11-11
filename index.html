@@ -548,7 +548,7 @@ async function submit(file){
 /* ===== Admin: klik logo ===== */
 /*DEMO_START - data dummy simulasi admin. HAPUS blok ini sampai DEMO_END (dan 2 baris bertanda DEMO) bila sudah selesai */
 const DEMO_PIN="__demo-psychosoul__"; // PIN khusus mode demo (data dummy); bukan PIN admin asli
-const DEMO_SKIP_PIN=false; // true = klik logo langsung masuk admin (data dummy), tanpa kode login. Ubah ke false untuk meminta PIN lagi
+const DEMO_SKIP_PIN=true; // true = klik logo langsung masuk admin (data dummy), tanpa kode login. Ubah ke false untuk meminta PIN lagi
 const DEMO_DATA=(()=>{
   const bk="https://example.com/bukti-dummy.jpg",J="C11.3.26.03.1",R="C11.3.26.03.2";
   const row=(kode,kelas,id,pemb,total,ke,w,nama,usia,jk,wa,alamat,st,bukti)=>({"Waktu":w,"ID Daftar":id,"Kode Kelas":kode,"Kelas":kelas,"Pembiayaan":pemb,"Total":total,"Peserta ke":ke,"Nama":nama,"Usia":usia,"Jenis Kelamin":jk,"No WA":wa,"Alamat":alamat,"Pekerjaan":"-","Jurusan":"","Semester":"","Tempat Pendidikan":"","Lama Praktik (thn)":"","Tempat Kerja":"","Bukti Bayar":bukti,"Status Bayar":st});
