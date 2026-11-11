@@ -211,6 +211,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
   <div class="m-head"><div><h2 id="konsT">Catatan</h2><div class="desc" id="konsSub"></div></div><button type="button" class="x" id="konsX" aria-label="Tutup">&times;</button></div>
   <div class="m-body">
     <div id="konsPhq"></div>
+    <div class="field" id="konsTemaF" hidden><label for="konsTema">Tema curhat</label><select id="konsTema"><option value="">Belum dipilih</option><option>Heart Talks</option><option>Social Circus</option><option>Career Crunch</option><option>What’s Next?</option><option>Lain-lain</option></select></div>
     <div class="field"><label for="konsHasil">Hasil konseling</label><textarea id="konsHasil" rows="5" maxlength="3000" placeholder="Ringkasan hasil konseling"></textarea></div>
     <div class="field"><label for="konsStatus">Status</label><select id="konsStatus"><option value="">Belum ditentukan</option><option value="Selesai">Selesai</option><option value="Eskalasi">Eskalasi</option><option value="Risiko tinggi">Risiko tinggi</option></select>
       <div class="note">Warna ikon catatan: Selesai = biru, Eskalasi = kuning, Risiko tinggi = merah. Status apa pun yang dipilih berarti sesi konseling sudah selesai (voucher dan centang Diserahkan jadi aktif).</div></div>
@@ -567,7 +568,7 @@ const DEMO_DATA=(()=>{
       row(J,jc,"regcurhat2611.001","reguler",49000,1,"09 Nov 2026 08:12","Aulia Rahmawati (DUMMY)",21,"Perempuan","081200000001","Condongcatur, Sleman","Lunas",bk),
       row(J,jc,"regcurhat2611.002","reguler",49000,1,"09 Nov 2026 08:45","Bagas Pratama (DUMMY)",23,"Laki-laki","081200000002","Caturtunggal, Sleman","Menunggu verifikasi",bk),
       row(J,jc,"regcurhat2611.003","reguler",49000,1,"09 Nov 2026 09:10","Citra Maharani (DUMMY)",19,"Perempuan","081200000003","Umbulharjo, Yogyakarta","Tidak sesuai",bk),
-      row(J,jc,"regcurhat2611.004","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Selesai","No Urut Voucher":1,"Voucher Diserahkan":"09 Nov 2026, 21.05","Dokumen SMART Goal":"demo"}:i===1?{"Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi","Status Konseling":"Eskalasi"}:i===2?{"Hasil Konseling":"Contoh: skor tinggi, segera dirujuk.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Risiko tinggi"}:{"Hasil Konseling":"Draft: sesi berlangsung, ringkasan belum final.","Nama Konselor":"Vira Zahra Athirah, S.Psi"})}}),
+      row(J,jc,"regcurhat2611.004","reguler",49000,1,"09 Nov 2026 09:40","Dimas Ardiansyah (DUMMY)",27,"Laki-laki","081200000004","Banguntapan, Bantul","Lunas",bk)].map((r,i)=>{const a=[[0,1,0,1],[2,2,1,1],[3,2,2,3],[1,0,1,0]][i];return{...r,"Tema Curhat":["Heart Talks","Career Crunch","","Social Circus"][i],"PHQ-4 Jawaban":a.join(","),"PHQ-4 Cemas":a[0]+a[1],"PHQ-4 Depresi":a[2]+a[3],"PHQ-4 Total":a.reduce((x,y)=>x+y,0),...(i===0?{"Hasil Konseling":"Contoh: klien tampak tenang, disarankan latihan relaksasi dan jurnal harian.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Selesai","No Urut Voucher":1,"Voucher Diserahkan":"09 Nov 2026, 21.05","Dokumen SMART Goal":"demo"}:i===1?{"Hasil Konseling":"Contoh: perlu pendampingan lanjutan.","Nama Konselor":"Vira Zahra Athirah, S.Psi","Status Konseling":"Eskalasi"}:i===2?{"Hasil Konseling":"Contoh: skor tinggi, segera dirujuk.","Nama Konselor":"Denty Aprilia Putri, M.Psi., Psikolog","Status Konseling":"Risiko tinggi"}:{"Hasil Konseling":"Draft: sesi berlangsung, ringkasan belum final.","Nama Konselor":"Vira Zahra Athirah, S.Psi"})}}),
     [R]:[
       row(R,rf,"REG-261109-082000-201","earlybird",99000,1,"09 Nov 2026 08:20","Eka Putri Lestari (DUMMY)",25,"Perempuan","081200000005","Gamping, Sleman","Lunas",bk),
       row(R,rf,"REG-261109-090500-202","paket",357000,1,"09 Nov 2026 09:05","Fajar Nugroho (DUMMY)",30,"Laki-laki","081200000006","Kotagede, Yogyakarta","Menunggu verifikasi",bk),
@@ -617,7 +618,7 @@ function payCell(k,r){const st=stBayar(r),nom=Number(r["Peserta ke"])===1?rp(Num
   return`<button type="button" class="pay-btn pay-${st}" data-pay="${esc(konsKey(k,r))}"><b>${nom}</b><small>${esc(jenisLabel(r["Pembiayaan"]))} · ${stLabel[st]}</small></button>`}
 const IC_EYE='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 const IC_DOC='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8"/></svg>';
-const draftKons=r=>String(r["Status Konseling"]||"").trim()===""&&!!(String(r["Hasil Konseling"]||"").trim()||String(r["Nama Konselor"]||"").trim()||String(r["Dokumen SMART Goal"]||"").trim());
+const draftKons=r=>String(r["Status Konseling"]||"").trim()===""&&!!(String(r["Hasil Konseling"]||"").trim()||String(r["Nama Konselor"]||"").trim()||String(r["Tema Curhat"]||"").trim()||String(r["Dokumen SMART Goal"]||"").trim());
 const ksClass=r=>({"selesai":"k-selesai","eskalasi":"k-eskalasi","risiko tinggi":"k-risiko"})[String(r["Status Konseling"]||"").trim().toLowerCase()]||"k-none";
 /* ===== Voucher diskon di kolom Keterangan (khusus kelas tertentu) ===== */
 const VCH_KELAS=["C11.3.26.03.1"];          // kelas yang pesertanya mendapat voucher (Jajan Curhat)
@@ -838,34 +839,34 @@ function bukaKons(key){
     <div class="note" style="margin-bottom:14px">Skor 3 atau lebih pada subskala Cemas atau Depresi menandakan perlu penelusuran lebih lanjut. PHQ-4 adalah skrining, bukan diagnosis.</div>`}
   else phqHtml='<div class="phq-sum">Belum ada data PHQ-4 untuk peserta ini.</div>';
   $("#konsPhq").innerHTML=phqHtml;
-  $("#konsHasil").value=r["Hasil Konseling"]||"";$("#konsNama").value=r["Nama Konselor"]||"";$("#konsStatus").value=r["Status Konseling"]||"";
+  $("#konsHasil").value=r["Hasil Konseling"]||"";$("#konsNama").value=r["Nama Konselor"]||"";$("#konsStatus").value=r["Status Konseling"]||"";$("#konsTema").value=r["Tema Curhat"]||"";
   const jc=VCH_KELAS.includes(kode),adaDok=String(r["Dokumen SMART Goal"]||"").trim()!=="";
-  $("#konsSmartF").hidden=!jc;$("#konsSmart").value="";
+  $("#konsSmartF").hidden=!jc;$("#konsTemaF").hidden=!jc;$("#konsSmart").value="";
   $("#konsSmartInfo").textContent=adaDok?"Dokumen sudah tersimpan. Pilih file baru hanya jika ingin menggantinya (PDF, Word, JPG/PNG, maks. 5 MB).":"PDF, Word, atau gambar JPG/PNG. Maksimal 5 MB.";
   // pulihkan draf yang belum sempat disimpan (autosave di perangkat ini)
   let pulih=false;try{const d=JSON.parse(localStorage.getItem(konsDraftKey())||"null");
-    if(d&&(d.hasil!==$("#konsHasil").value||d.nama!==$("#konsNama").value||d.status!==$("#konsStatus").value)){$("#konsHasil").value=d.hasil;$("#konsNama").value=d.nama;$("#konsStatus").value=d.status;pulih=true}}catch(e){}
+    if(d&&(d.hasil!==$("#konsHasil").value||d.nama!==$("#konsNama").value||d.status!==$("#konsStatus").value||(d.tema||"")!==$("#konsTema").value)){$("#konsTema").value=d.tema||"";$("#konsHasil").value=d.hasil;$("#konsNama").value=d.nama;$("#konsStatus").value=d.status;pulih=true}}catch(e){}
   konsUI();if(pulih){$("#konsSmartInfo").textContent+=" · Isian yang belum disimpan dipulihkan dari draf di perangkat ini."}
   $("#konsErr").hidden=true;$("#kons").showModal()}
 const konsDraftKey=()=>"psychosoul-kons:"+konsKode+"|"+(konsRow&&konsRow["ID Daftar"])+"|"+(konsRow&&konsRow["Peserta ke"]);
 function konsUI(){const st=$("#konsStatus").value,adaDok=konsRow&&String(konsRow["Dokumen SMART Goal"]||"").trim()!=="";
-  const isi=$("#konsHasil").value.trim()||$("#konsNama").value.trim()||$("#konsSmart").files.length||adaDok;
+  const isi=$("#konsHasil").value.trim()||$("#konsTema").value||$("#konsNama").value.trim()||$("#konsSmart").files.length||adaDok;
   $("#konsDraft").hidden=!(st===""&&isi);$("#konsGo").textContent=st===""?"Simpan draft":"Simpan"}
-$("#konsForm").addEventListener("input",()=>{konsUI();try{localStorage.setItem(konsDraftKey(),JSON.stringify({hasil:$("#konsHasil").value,nama:$("#konsNama").value,status:$("#konsStatus").value}))}catch(e){}});
+$("#konsForm").addEventListener("input",()=>{konsUI();try{localStorage.setItem(konsDraftKey(),JSON.stringify({hasil:$("#konsHasil").value,nama:$("#konsNama").value,status:$("#konsStatus").value,tema:$("#konsTema").value}))}catch(e){}});
 $("#konsForm").addEventListener("change",()=>{konsUI()});
 $("#adminMain").addEventListener("click",e=>{const b=e.target.closest("[data-kons]");if(b)bukaKons(b.dataset.kons)});
 $("#konsX").addEventListener("click",()=>$("#kons").close());$("#konsCancel").addEventListener("click",()=>$("#kons").close());
 const bacaBase64=f=>new Promise((ok,no)=>{const fr=new FileReader();fr.onload=()=>ok(String(fr.result).split(",")[1]||"");fr.onerror=()=>no(new Error("Gagal membaca file"));fr.readAsDataURL(f)});
 $("#konsForm").addEventListener("submit",async e=>{e.preventDefault();
-  const b=$("#konsGo"),er=$("#konsErr"),hasil=$("#konsHasil").value.trim(),nama=$("#konsNama").value.trim(),status=$("#konsStatus").value,file=$("#konsSmart").files[0];
+  const b=$("#konsGo"),er=$("#konsErr"),hasil=$("#konsHasil").value.trim(),nama=$("#konsNama").value.trim(),status=$("#konsStatus").value,tema=$("#konsTemaF").hidden?"":$("#konsTema").value,file=$("#konsSmart").files[0];
   er.hidden=true;
   if(file&&(!SMART_EXT.test(file.name)||file.size>SMART_MAX)){er.textContent=!SMART_EXT.test(file.name)?"Format dokumen harus PDF, Word, JPG, atau PNG.":"Ukuran dokumen melebihi 5 MB.";er.hidden=false;return}
   b.disabled=true;b.textContent="Menyimpan…";
   try{
     const smart=file?{name:file.name,mime:file.type||"application/octet-stream",data:await bacaBase64(file)}:null;
-    if(!(adminPin===DEMO_PIN)){const r=await api({action:"konseling",pin:adminPin,kode:konsKode,id:konsRow["ID Daftar"],ke:konsRow["Peserta ke"],hasil,konselor:nama,status,smart});if(!r.ok)throw new Error(r.error||"Gagal menyimpan");if(r.no)konsRow["No Urut Voucher"]=r.no;if(r.smart)konsRow["Dokumen SMART Goal"]=r.smart}
+    if(!(adminPin===DEMO_PIN)){const r=await api({action:"konseling",pin:adminPin,kode:konsKode,id:konsRow["ID Daftar"],ke:konsRow["Peserta ke"],hasil,konselor:nama,status,tema,smart});if(!r.ok)throw new Error(r.error||"Gagal menyimpan");if(r.no)konsRow["No Urut Voucher"]=r.no;if(r.smart)konsRow["Dokumen SMART Goal"]=r.smart}
     else if(file){konsRow["Dokumen SMART Goal"]="demo";demoSmart[[konsKode,konsRow["ID Daftar"],konsRow["Peserta ke"]].join("|")]={name:file.name,mime:file.type,dataUrl:"data:"+(file.type||"application/octet-stream")+";base64,"+smart.data}}
-    konsRow["Hasil Konseling"]=hasil;konsRow["Nama Konselor"]=nama;konsRow["Status Konseling"]=status;
+    konsRow["Hasil Konseling"]=hasil;konsRow["Nama Konselor"]=nama;konsRow["Status Konseling"]=status;konsRow["Tema Curhat"]=tema;
     if(status&&!konsRow["No Urut Voucher"])konsRow["No Urut Voucher"]=Math.max(0,...(adminData[konsKode]||[]).map(x=>Number(x["No Urut Voucher"])||0))+1; // demo / server lama
     try{localStorage.removeItem(konsDraftKey())}catch(e){}
     $("#kons").close();renderAdmin()}

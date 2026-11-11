@@ -20,7 +20,7 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher","Dokumen SMART Goal"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher","Dokumen SMART Goal","Tema Curhat"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -100,11 +100,14 @@ function konseling(d) {
     if (!sh || sh.getRange(1, 1).getValue() !== "Waktu") throw new Error("Sheet kelas tidak ditemukan");
     ensureHeader(sh);
     const v = sh.getRange(1, 1, sh.getLastRow(), HEAD.length).getValues(), h = v[0];
-    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor"), cS = h.indexOf("Status Konseling"), cV = h.indexOf("No Urut Voucher"), cSG = h.indexOf("Dokumen SMART Goal");
+    const cId = h.indexOf("ID Daftar"), cKe = h.indexOf("Peserta ke"), cH = h.indexOf("Hasil Konseling"), cN = h.indexOf("Nama Konselor"), cS = h.indexOf("Status Konseling"), cV = h.indexOf("No Urut Voucher"), cSG = h.indexOf("Dokumen SMART Goal"), cT = h.indexOf("Tema Curhat");
     const st = String(d.status || "");
     if (["", "Selesai", "Eskalasi", "Risiko tinggi"].indexOf(st) < 0) throw new Error("Status konseling tidak valid");
+    const tema = String(d.tema || "");
+    if (["", "Heart Talks", "Social Circus", "Career Crunch", "What’s Next?", "Lain-lain"].indexOf(tema) < 0) throw new Error("Tema curhat tidak valid");
     for (let i = 1; i < v.length; i++) {
       if (String(v[i][cId]) === String(d.id) && String(v[i][cKe]) === String(d.ke)) {
+        sh.getRange(i + 1, cT + 1).setValue(tema);
         sh.getRange(i + 1, cH + 1).setValue(safe(String(d.hasil || "").slice(0, 3000)));
         sh.getRange(i + 1, cN + 1).setValue(safe(String(d.konselor || "").slice(0, 120)));
         sh.getRange(i + 1, cS + 1).setValue(st);            // status kosong = draft: isian tetap tersimpan
