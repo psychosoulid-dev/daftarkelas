@@ -668,7 +668,7 @@ function tampilTiket(r,kode,st){
     <div><h4>Data klien</h4><dl><dt>Nama</dt><dd>${nm}</dd><dt>Usia</dt><dd>${esc(r["Usia"]||"-")}</dd><dt>No. WA</dt><dd>${esc(r["No WA"]||"-")}</dd><dt>ID daftar</dt><dd>${esc(r["ID Daftar"]||"-")}</dd></dl></div>
     <div><h4>Data kelas</h4><dl><dt>Kelas</dt><dd>${esc(r["Kelas"]||k.nama||"")}</dd><dt>Jadwal</dt><dd>${esc(jadwal)}</dd><dt>Tempat</dt><dd>${esc(k.tempat||"-")}</dd><dt>Pembayaran</dt><dd>${rp(Number(r["Total"])||0)} · ${esc(jenisLabel(r["Pembiayaan"]))}</dd></dl></div>
     </div></div>`;
-    byrTicketTxt=`Halo ${r["Nama"]||""}, pembayaran (ID daftar: ${r["ID Daftar"]||"-"}) untuk kelas ${r["Kelas"]||k.nama||""} sudah kami terima.\n\nJadwal: ${jadwal}\nTempat: ${k.tempat||"-"}\n${ant?"No. antrian: "+ant+"\n":""}\nSampai jumpa! – Minsoul, Psychosoul`}
+    byrTicketTxt=`Halo ${r["Nama"]||""},\nPembayaran ID daftar: ${r["ID Daftar"]||"-"} untuk kelas ${r["Kelas"]||k.nama||""} sudah kami terima.\n\n${ant?"No. antrian: "+ant+".\n\n":""}Jadwal: ${jadwal}.\nTempat: ${k.tempat||"-"}.\n\nSampai jumpa! – Minsoul, Psychosoul -`}
   else{
     box.innerHTML=`<div class="tiket bad"><div class="th"><div><b>Payment tidak sesuai</b><small>Konfirmasi pembayaran · Psychosoul</small></div></div><div class="tb">
     <p class="pesan" style="margin:0">Bukti pembayaran yang kamu kirim belum sesuai. Silakan menghubungi <b>Minsoul</b> (WA ${esc(WA_NUMBER)}) untuk bantuan.</p>
