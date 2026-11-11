@@ -370,7 +370,7 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",
 const todayStr=()=>new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Jakarta"}).format(new Date());
 const _old=()=>{const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")};
 /*SIMULASI*/const SIMULASI_BUKA=[]; // kelas yang pendaftarannya dipaksa dibuka untuk uji coba. KOSONGKAN daftar ini ([]) setelah simulasi selesai
-const BUKA_JAM={"C11.3.26.03.1":"2026-11-14T13:00:00+07:00"}; // jam buka pendaftaran (WIB) per kelas; menimpa jam 00.00 dari tanggal di sheet
+const BUKA_JAM={"C11.3.26.03.1":"2026-11-14T13:00:00+07:00","C11.3.26.03.2":"2026-11-15T13:00:00+07:00"}; // jam buka pendaftaran (WIB) per kelas; menimpa jam 00.00 dari tanggal di sheet
 const bukaJam=k=>BUKA_JAM[k.id]?Date.parse(BUKA_JAM[k.id]):0;
 const bukaTxt=k=>tglB(k.harga.regulerMulai)+(bukaJam(k)?", "+new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).format(bukaJam(k)).replace(":",".")+" WIB":"");
 const belumBuka=k=>!SIMULASI_BUKA.includes(k.id)&&(!!(bukaJam(k)&&Date.now()<bukaJam(k))||!!(k.harga.regulerMulai&&todayStr()<k.harga.regulerMulai)); // pendaftaran dibuka mulai periode reguler mulai (atau jam khusus di BUKA_JAM)

@@ -221,7 +221,7 @@ function buatId(sh, kode) {
 }
 
 // Jam buka pendaftaran per kode kelas (WIB). Sebelum waktu ini, server menolak pendaftaran. Kosongkan/hapus entri bila tidak dipakai.
-const BUKA_JAM = { "C11.3.26.03.1": "2026-11-14T13:00:00+07:00" };
+const BUKA_JAM = { "C11.3.26.03.1": "2026-11-14T13:00:00+07:00", "C11.3.26.03.2": "2026-11-15T13:00:00+07:00" };
 
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
