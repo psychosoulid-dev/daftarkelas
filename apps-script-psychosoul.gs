@@ -30,6 +30,8 @@ function doGet() { return out({ ok: true, msg: "Psychosoul API aktif" }); }
 function doPost(e) {
   try {
     const d = JSON.parse(e.postData.contents);
+    if (d.action === "status_daftar") return out({ ok: true, tutup: daftarTutup() });   // publik: kelas yang pendaftarannya ditutup admin
+    if (d.action === "tutup") return out(tutupDaftar(d));
     if (d.action === "daftar") return out(daftar(d));
     if (d.action === "admin") return out(admin(d));
     if (d.action === "konseling") return out(konseling(d));
@@ -226,6 +228,7 @@ const BUKA_JAM = { "C11.3.26.03.1": "2026-11-14T13:00:00+07:00", "C11.3.26.03.2"
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
+  if (daftarTutup().indexOf(kode) >= 0) throw new Error("Pendaftaran kelas ini sudah ditutup.");
   if (BUKA_JAM[kode] && Date.now() < Date.parse(BUKA_JAM[kode])) throw new Error("Pendaftaran belum dibuka. Silakan coba lagi sesuai jadwal pembukaan.");
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
@@ -259,6 +262,22 @@ function daftar(d) {
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
+  } finally { lock.releaseLock(); }
+}
+
+// Tutup/buka pendaftaran manual dari laman admin. Disimpan di Script properties (kunci TUTUP_DAFTAR).
+function daftarTutup() {
+  try { return JSON.parse(PropertiesService.getScriptProperties().getProperty("TUTUP_DAFTAR") || "[]"); } catch (e) { return []; }
+}
+function tutupDaftar(d) {
+  const err = cekPin(d); if (err) return { ok: false, error: err };
+  const kode = String(d.kode || "").slice(0, 90); if (!kode) return { ok: false, error: "Kode kelas kosong" };
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const set = daftarTutup().filter(x => x !== kode);
+    if (d.tutup) set.push(kode);
+    PropertiesService.getScriptProperties().setProperty("TUTUP_DAFTAR", JSON.stringify(set));
+    return { ok: true, tutup: set };
   } finally { lock.releaseLock(); }
 }
 

@@ -113,7 +113,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
 .acc summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 18px;font-weight:600}
 .acc summary::-webkit-details-marker{display:none}
 .acc summary::before{content:"▸";color:var(--teal);transition:transform .15s}.acc[open] summary::before{transform:rotate(90deg)}
-.acc-t{flex:1;min-width:0}.acc small{display:block;font-weight:500;color:var(--muted)}
+.acc-t{flex:1;min-width:0}.tutup-btn{padding:6px 12px;font-size:.85rem;min-height:36px;white-space:nowrap}.tutup-btn.on{border-color:#C2403A;color:#C2403A}@media(max-width:560px){.acc summary{flex-wrap:wrap}.acc-t{flex:1 1 60%}.tutup-btn{min-height:40px}}.acc small{display:block;font-weight:500;color:var(--muted)}
 .badge{background:var(--teal-soft);color:var(--teal);border-radius:999px;padding:2px 12px;font-size:.85rem;white-space:nowrap}
 .acc-b{border-top:1px solid var(--line);padding:12px 18px 16px;overflow-x:auto}
 .phq{border:1px solid var(--line);border-radius:12px;padding:12px 14px 4px;margin:4px 0 14px;background:#F6FBFA}
@@ -399,9 +399,11 @@ function renderList(){
    ${s==="soon"?"":`<div class="biaya">${biayaHTML(k)}</div>`}
    <div class="act">${actBtn(k,s)}</div></li>`}).join(""):`<li class="empty">${emptyMsg()}</li>`}
 // kelas lebih dari satu hari: tanggal mulai diakhiri " -", tanggal akhir wrap di baris bawah
+let TUTUP=new Set();const ditutup=k=>TUTUP.has(k.id);
+async function muatStatus(){try{const r=await api({action:"status_daftar"});if(r&&r.ok){TUTUP=new Set(r.tutup||[]);if(!adminOn&&!document.querySelector("dialog[open]"))renderList()}}catch(e){}}
 const bisaDaftar=k=>!!k.tanggal&&paketList(k).some(p=>!p.disabled);
 function actBtn(k,s){
-  if(s==="expired")return'<button type="button" class="btn" disabled>Pendaftaran ditutup</button>';
+  if(s==="expired"||ditutup(k))return'<button type="button" class="btn" disabled>Pendaftaran ditutup</button>';
   if(!bisaDaftar(k))return'<button type="button" class="btn" disabled>Segera dibuka</button>';
   return`<button type="button" class="btn" data-id="${esc(k.id)}">Daftar kelas ini</button>`}
 function hariList(k){
@@ -668,7 +670,7 @@ function renderAdmin(){
   $("#adminMain").innerHTML=`<div class="adm-bar"><div><h2>Admin · Kelas/Event On going${adminPin==="demo"?` <span class="badge">MODE DEMO · data dummy</span>`:""}</h2><p class="desc">${on.length} kelas berjalan. Klik kelas untuk membuka data peserta.</p></div>
    <div class="adm-act"><button type="button" class="btn ghost" id="admRefresh">Muat ulang</button><button type="button" class="btn ghost" id="admExit">Keluar</button></div></div>`+
   (on.length?on.map(k=>{const rows=adminData[k.id]||[];
-    return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span></summary><div class="acc-b">${tabelPeserta(rows,k)}</div></details>`}).join("")
+    return`<details class="acc" data-k="${esc(k.id)}" ${openAcc.has(k.id)?"open":""}><summary><span class="acc-t">${esc(k.nama)}<small>${esc(k.id)} · ${tgl(k.tanggal)}</small></span><span class="badge">${rows.length} peserta</span><button type="button" class="btn ghost tutup-btn${ditutup(k)?" on":""}" data-tutup="${esc(k.id)}" title="${ditutup(k)?"Pendaftaran ditutup. Klik untuk membuka kembali":"Tutup pendaftaran kelas ini"}">${ditutup(k)?"Buka daftar":"Tutup daftar"}</button></summary><div class="acc-b">${tabelPeserta(rows,k)}</div></details>`}).join("")
    :'<div class="empty">Belum ada kelas/event dengan status On going.</div>')}
 let byrRow=null,byrKode=null,byrTicketTxt="";
 const noAntri=r=>{const m=String(r["ID Daftar"]||"").match(/\.(\d+)$/);return m?m[1]:""};
@@ -913,11 +915,16 @@ $("#konsForm").addEventListener("submit",async e=>{e.preventDefault();
 $("#adminMain").addEventListener("toggle",e=>{const d=e.target;if(d.dataset&&d.dataset.k)d.open?openAcc.add(d.dataset.k):openAcc.delete(d.dataset.k)},true);
 $("#adminMain").addEventListener("click",async e=>{
   if(e.target.closest("#admExit")){setAdmin(false);return}
+  const tb=e.target.closest("[data-tutup]");
+  if(tb){e.preventDefault();e.stopPropagation();const kd=tb.dataset.tutup,tutup=!TUTUP.has(kd);tb.disabled=true;tb.textContent="Menyimpan…";
+    try{if(adminPin!==DEMO_PIN){const r=await api({action:"tutup",pin:adminPin,kode:kd,tutup});if(!r.ok)throw new Error(r.error||"Gagal menyimpan");TUTUP=new Set(r.tutup||[])}else{tutup?TUTUP.add(kd):TUTUP.delete(kd)}}
+    catch(err){alert("Gagal: "+err.message)}
+    renderAdmin();renderList();return}
   const b=e.target.closest("#admRefresh");if(!b)return;b.disabled=true;b.textContent="Memuat…";
   try{await Promise.all([muatAdmin(adminPin),loadKelas(true)])}catch(err){alert("Gagal memuat: "+err.message)}
   renderAdmin()});
 
-renderFilters();loadKelas();setInterval(()=>loadKelas(true),300000);setInterval(()=>{try{if(!adminOn&&!document.querySelector("dialog[open]"))renderList()}catch(e){}},30000); // muat ulang tiap 5 menit
+renderFilters();loadKelas();muatStatus();setInterval(muatStatus,60000);setInterval(()=>loadKelas(true),300000);setInterval(()=>{try{if(!adminOn&&!document.querySelector("dialog[open]"))renderList()}catch(e){}},30000); // muat ulang tiap 5 menit
 
 /* jam realtime WIB: dddd, dd mmmm yyyy - hh:mm WIB */
 const clockFmt=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",weekday:"long",day:"2-digit",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit",hourCycle:"h23"});
