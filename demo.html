@@ -438,7 +438,7 @@ $("#infoClose").addEventListener("click",()=>$("#info").close());$("#infoClose2"
 
 /* pop up */
 const dlg=$("#dlg");let K=null,step=1,biaya=null,jumlah=1;
-const urut=()=>K&&pakaiPHQ(K)?["#sK","#s1","#s2","#s3"]:["#s1","#s2","#s3"];
+const urut=()=>K&&pakaiPHQ(K)?["#s1","#sK","#s2","#s3"]:["#s1","#s2","#s3"];
 const LBL={"#s1":"Pembiayaan","#s2":"Data peserta","#sK":"Persetujuan & skrining","#s3":"Pembayaran"};
 function paketList(k){const l=[],hg=k.harga,pr=perReg(k);
   const note=belumBuka(k)?` (dibuka ${bukaTxt(k)})`:" (periode berakhir)";
@@ -449,7 +449,7 @@ function paketList(k){const l=[],hg=k.harga,pr=perReg(k);
   return l}
 function openForm(id){
   K=kelas.find(x=>x.id===id);step=1;biaya=null;jumlah=1;$("#frm").reset();
-  $("#sK").innerHTML=pakaiPHQ(K)?konsenHTML():""; // tab 1 (persetujuan & skrining) untuk kelas ber-PHQ-4
+  $("#sK").innerHTML=""; // diisi saat lanjut dari tab 1 (jumlah peserta sudah diketahui)
   $("#dlgSub").textContent=K.nama+" · "+tgl(K.tanggal);
   $("#jenis").innerHTML='<option value="">Pilih jenis pembiayaan</option>'+paketList(K).map(p=>`<option value="${p.v}" ${p.disabled?"disabled":""}>${esc(p.label)}${p.disabled?"":" – "+rp(p.nominal)}</option>`).join("");
   $("#nom1").hidden=true;$("#jenisNote").textContent="";
@@ -547,6 +547,7 @@ $("#next").addEventListener("click",()=>{
     if(!valid("#s1"))return;
     if(biaya&&biaya.v==="voucher"&&!vchRe().test(vchNilai())){const e=$("#vchErr");e.textContent="Format kode voucher tidak sesuai. Contoh: "+vchKode(1);e.hidden=false;$("#vchIn").focus();return}
     $("#pesertaBox").innerHTML=Array.from({length:jumlah},(_,i)=>pesertaHTML(i)).join("");
+    $("#sK").innerHTML=pakaiPHQ(K)?konsenHTML():"";
     step++;show();
   }else if(cur==="#s2"){
     if(!valid("#s2"))return;
