@@ -394,7 +394,7 @@ function renderList(){
   $("#list").innerHTML=d.length?d.map(k=>{const s=status(k);return `<li class="item card-${s}">
    <div class="title"><h2>${esc(k.nama)}</h2><span class="fn"><button type="button" class="more" data-info="${k.id}">More info</button></span>
     <div class="pills"><span class="tag">${k.sasaran==="umum"?"Umum":esc(k.targetTxt||"Tematik")}</span><span class="tag st-${s}">${STATUS[s]}</span>${SIMULASI_BUKA.includes(k.id)?'<span class="tag" style="background:#FFD9B8;color:#8A3B00">Simulasi</span>':""}</div></div>
-   <div class="jadwal">${hariList(k)}${!k.tanggal&&k.jam==="Soon"?"":`<span class="fn">${esc(jamTxt(k.jam))}</span>`}<span class="val" style="display:block;margin-top:8px">${esc(k.tempat)}</span></div>
+   <div class="jadwal">${hariList(k)}${!k.tanggal&&k.jam==="Soon"?"":`<span class="fn">${esc(jamTxt(k.jam))}</span>`}<span class="val" style="display:block;margin-top:8px">${esc(k.tempat)}</span>${k.info&&k.info.kuota?`<span class="fn kuota" style="display:block;margin-top:4px">Kuota: ${esc(/^\d+$/.test(String(k.info.kuota).trim())?k.info.kuota+" peserta":k.info.kuota)}</span>`:""}</div>
    <hr class="sep">
    ${s==="soon"?"":`<div class="biaya">${biayaHTML(k)}</div>`}
    <div class="act">${actBtn(k,s)}</div></li>`}).join(""):`<li class="empty">${emptyMsg()}</li>`}
