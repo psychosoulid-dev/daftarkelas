@@ -74,6 +74,7 @@ form{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
 .m-head{padding:18px 22px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
 .m-head h2{margin:0;font-size:1.2rem}
 .x{border:0;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--muted)}
+.consent{background:#f3f8f5;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:.9rem}.consent h3{margin:0 0 6px;font-size:1rem}.consent ul{margin:0 0 8px;padding-left:18px}.consent li{margin:3px 0}.consent .ck{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-weight:500}.consent .ck input{margin-top:3px;width:20px;height:20px;flex:none}
 .steps{display:flex;gap:6px;padding:12px 22px 0;font-size:.85rem;color:var(--muted)}
 .steps div{flex:1;border-top:3px solid var(--line);padding-top:5px}
 .steps .on{border-color:var(--teal);color:var(--teal);font-weight:600}
@@ -237,7 +238,7 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
     <div><h2 id="dlgTitle">Pendaftaran kelas</h2><div class="desc" id="dlgSub"></div></div>
     <button type="button" class="x" id="close" aria-label="Tutup">&times;</button>
   </div>
-  <div class="steps" id="steps"><div>Pembiayaan</div><div>Data peserta</div><div>Pembayaran</div></div>
+  <div class="steps" id="steps"></div>
   <div class="m-body">
     <!-- Section 1 -->
     <section id="s1">
@@ -256,6 +257,8 @@ input[type=password]{width:100%;font:inherit;padding:10px 12px;border:1px solid 
     </section>
     <!-- Section 2 -->
     <section id="s2" hidden><div id="pesertaBox"></div></section>
+    <!-- Section: persetujuan + skrining (kelas dengan PHQ-4) -->
+    <section id="sK" hidden></section>
     <!-- Section 3 -->
     <section id="s3" hidden>
       <div class="resume" id="resume"></div>
@@ -435,7 +438,8 @@ $("#infoClose").addEventListener("click",()=>$("#info").close());$("#infoClose2"
 
 /* pop up */
 const dlg=$("#dlg");let K=null,step=1,biaya=null,jumlah=1;
-const secs=["#s1","#s2","#s3"];
+const urut=()=>K&&pakaiPHQ(K)?["#s1","#s2","#sK","#s3"]:["#s1","#s2","#s3"];
+const LBL={"#s1":"Pembiayaan","#s2":"Data peserta","#sK":"Persetujuan & skrining","#s3":"Pembayaran"};
 function paketList(k){const l=[],hg=k.harga,pr=perReg(k);
   const note=belumBuka(k)?` (dibuka ${bukaTxt(k)})`:" (periode berakhir)";
   if(hg.earlybird&&hg.earlybird.nominal!=null){const on=ebAktif(k);l.push({v:"earlybird",label:"Earlybird"+(on?(hg.earlybird.sampai?` (sampai ${tgl(hg.earlybird.sampai)})`:""):belumBuka(k)?` (dibuka ${bukaTxt(k)})`:" (periode berakhir)"),nominal:hg.earlybird.nominal,jumlah:1,disabled:!on})}
@@ -460,10 +464,13 @@ $("#jenis").addEventListener("change",e=>{
 const vchRe=()=>new RegExp("^"+VCH_PREFIX.replace(/\./g,"\\.")+"\\.\\d{"+VCH_PAD+"}$");
 const vchNilai=()=>$("#vchIn").value.trim().toUpperCase();
 function show(){
-  secs.forEach((s,i)=>$(s).hidden=(i+1!==step));
+  const secs=urut();
+  document.querySelectorAll(".m-body > section").forEach(x=>x.hidden=true);
+  $(secs[step-1]).hidden=false;
+  $("#steps").innerHTML=secs.map(x=>`<div>${LBL[x]}</div>`).join("");
   [...$("#steps").children].forEach((d,i)=>d.className=i+1===step?"on":i+1<step?"done":"");
   $("#back").style.visibility=step===1?"hidden":"visible";
-  $("#next").textContent=step===3?"Kirim pendaftaran":"Lanjut";
+  $("#next").textContent=step===secs.length?"Kirim pendaftaran":"Lanjut";
   $(".m-body").scrollTop=0}
 
 /* section 2: form peserta */
@@ -473,10 +480,25 @@ const pakaiPHQ=k=>PHQ4_KELAS.includes(k.id)||/jajan curhat/i.test(k.nama||"");
 const PHQ_ITEMS=["Merasa gugup, cemas, atau tegang","Tidak dapat menghentikan atau mengendalikan rasa khawatir","Kurang berminat atau kurang menikmati dalam melakukan sesuatu","Merasa sedih, murung, atau putus asa"];
 const PHQ_OPSI=["Tidak sama sekali","Beberapa hari","Lebih dari separuh hari","Hampir setiap hari"];
 function phqHTML(n){
-  return `<div class="phq"><h3>Cek kondisi anda</h3>
+  return `<div class="phq"><h3>Skrining PHQ-4</h3>
   <div class="note">Selama <b>2 minggu terakhir</b>, seberapa sering kamu terganggu oleh masalah-masalah berikut?</div>
   ${PHQ_ITEMS.map((t,q)=>`<div class="q" role="group" aria-label="${esc(t)}"><span class="lb">${q+1}. ${esc(t)}</span><div class="opts">${PHQ_OPSI.map((o,v)=>`<label><input type="radio" name="${n}phq${q+1}" value="${v}" ${v===0?"required":""}> ${o}</label>`).join("")}</div></div>`).join("")}
-  <div class="note" style="padding:8px 0">Skrining singkat ini hanya membantu tim Psychosoul memahami kondisimu dan bukan diagnosis. Jika kamu merasa sangat tertekan, segera hubungi admin atau orang terdekat.</div></div>`}
+  <div class="note" style="padding:8px 0">Skrining ini bukan diagnosis. Jika kamu merasa sangat tertekan, segera hubungi admin atau orang terdekat.</div></div>`}
+const CONSENT_VERSI="v1-2026-11-13",CONSENT_SIMPAN="12 bulan";
+function konsenHTML(){
+  return `<div class="consent"><h3>Persetujuan &amp; skrining</h3>
+  <ul>
+   <li><b>Data yang dipakai:</b> data diri, bukti pembayaran, jawaban skrining, dan catatan sesi curhat, untuk pendaftaran, informasi antrian lewat WA, dan sesi.</li>
+   <li><b>Siapa yang melihat:</b> hanya konselor dan admin Psychosoul. Disimpan di Google (Sheets/Drive) selama ${CONSENT_SIMPAN} setelah kegiatan, tidak dibagikan tanpa izinmu kecuali diwajibkan hukum.</li>
+   <li><b>PHQ-4</b> adalah skrining singkat kecemasan dan suasana hati. <b>Bukan diagnosis</b>, dan sesi ini <b>bukan terapi</b>. Mengisinya sukarela.</li>
+   <li>Bila hasilmu perlu perhatian lebih, tim akan menghubungimu lewat WA untuk menyarankan tindak lanjut.</li>
+   <li>Isi sesi dijaga kerahasiaannya, kecuali ada risiko membahayakan dirimu atau orang lain, atau diwajibkan hukum.</li>
+   <li><b>Hakmu:</b> bertanya, memperbaiki, menghapus data, atau menarik persetujuan lewat WA ${esc(WA_NUMBER)}.</li>
+  </ul>
+  <label class="ck"><input type="checkbox" id="konsenSetuju" required><span>Saya sudah membaca dan <b>setuju</b> data saya diproses serta mengisi skrining PHQ-4.</span></label>
+  ${jumlah>1?`<label class="ck"><input type="checkbox" id="konsenIzin" required><span>Saya sudah mendapat izin dari peserta lain yang saya daftarkan.</span></label>`:""}
+  </div>
+  ${Array.from({length:jumlah},(_,i)=>`<fieldset data-i="${i}">${jumlah>1?`<legend>Peserta ${i+1}</legend>`:""}${phqHTML(`f${i}_`)}</fieldset>`).join("")}`}
 function pesertaHTML(i){
   const n=`f${i}_`,tem=K.sasaran==="tematik";
   return `<fieldset data-i="${i}"><legend>${jumlah>1?"Peserta "+(i+1):"Data peserta"}</legend>
@@ -499,7 +521,6 @@ function pesertaHTML(i){
    <div data-sub="psikolog" hidden>
     <div class="row"><div class="field"><label for="${n}lama">Lama berpraktik (tahun)</label><input type="number" id="${n}lama" name="${n}lama_praktik" min="0" step="0.5" required disabled></div>
     <div class="field"><label for="${n}tk">Tempat kerja</label><input type="text" id="${n}tk" name="${n}tempat_kerja" required disabled></div></div></div>`:""}
-  ${pakaiPHQ(K)?phqHTML(n):""}
   </fieldset>`}
 $("#pesertaBox").addEventListener("change",e=>{
   if(!e.target.name.endsWith("_kerja"))return;
@@ -516,14 +537,20 @@ function valid(sec){const els=[...$(sec).querySelectorAll("input,select,textarea
   for(const x of els){if(!x.checkValidity()){x.reportValidity();return false}}return true}
 
 $("#next").addEventListener("click",()=>{
-  if(step===1){
+  const secs=urut(),cur=secs[step-1];
+  if(cur==="#s1"){
     if(!valid("#s1"))return;
     if(biaya&&biaya.v==="voucher"&&!vchRe().test(vchNilai())){const e=$("#vchErr");e.textContent="Format kode voucher tidak sesuai. Contoh: "+vchKode(1);e.hidden=false;$("#vchIn").focus();return}
     $("#pesertaBox").innerHTML=Array.from({length:jumlah},(_,i)=>pesertaHTML(i)).join("");
-    step=2;show();
-  }else if(step===2){
+    if(secs.includes("#sK"))$("#sK").innerHTML=konsenHTML();
+    step++;show();
+  }else if(cur==="#s2"){
     if(!valid("#s2"))return;
-    resume();step=3;show();
+    if(!secs.includes("#sK"))resume();
+    step++;show();
+  }else if(cur==="#sK"){
+    if(!valid("#sK"))return;
+    resume();step++;show();
   }else{
     const f=$("#bukti").files[0],er=$("#buktiErr");
     if(!f){er.textContent="Upload bukti pembayaran terlebih dahulu.";er.hidden=false;return}
@@ -534,7 +561,7 @@ $("#back").addEventListener("click",()=>{step--;show()});
 $("#close").addEventListener("click",()=>dlg.close());
 
 let _demoNo=4;
-const api=async body=>{if(body&&body.action==="daftar"){await new Promise(r=>setTimeout(r,600));_demoNo++;return{ok:true,id:(body.kode==="C11.3.26.03.1"?"regcurhat2611.":"REG-DEMO-")+("00"+_demoNo).slice(-3)}} // DEMO-ARTIFACT: pendaftaran tidak dikirim ke Sheet
+const api=async body=>{if(body&&body.action==="daftar"){await new Promise(r=>setTimeout(r,600));_demoNo++;return{ok:true,id:(body.kode==="C11.3.26.03.1"?"regcurhat2611.":"REG-DEMO-")+("00"+_demoNo).slice(-3)}} // DEMO: tidak dikirim ke Sheet
   const r=await fetch(API_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
   if(!r.ok)throw new Error("HTTP "+r.status);return r.json()};
 // perkecil foto bukti (maks 1600px, JPEG) agar kirim cepat
@@ -545,15 +572,15 @@ function kompres(file){return new Promise((ok,no)=>{const u=URL.createObjectURL(
   im.onerror=()=>no(new Error("Gambar tidak bisa dibaca"));im.src=u})}
 async function submit(file){
   const er=$("#buktiErr"),btn=$("#next");
-  const peserta=[...document.querySelectorAll("#pesertaBox fieldset")].map(fs=>{
-    const o={};fs.querySelectorAll("input,textarea").forEach(x=>{
-      if(x.disabled)return;if(x.type==="radio"&&!x.checked)return;o[x.name.replace(/^f\d+_/,"")]=x.value});
+  const peserta=[...document.querySelectorAll("#pesertaBox fieldset")].map((fs,i)=>{
+    const o={};[fs,...document.querySelectorAll(`#sK fieldset[data-i="${i}"]`)].forEach(root=>root.querySelectorAll("input,textarea").forEach(x=>{
+      if(x.disabled)return;if(x.type==="radio"&&!x.checked)return;o[x.name.replace(/^f\d+_/,"")]=x.value}));
     if(o.phq1!==undefined){const s=[1,2,3,4].map(q=>Number(o["phq"+q]));o.phq_cemas=s[0]+s[1];o.phq_depresi=s[2]+s[3];o.phq_total=o.phq_cemas+o.phq_depresi}
     return o});
   if(!API_URL){er.textContent="Pendaftaran belum terhubung ke Google Sheet (API_URL belum diisi).";er.hidden=false;return}
   btn.disabled=true;btn.textContent="Mengirim…";
   try{
-    const r=await api({action:"daftar",kode:K.id,kelas:K.nama,tanggal:K.tanggal,pembiayaan:biaya.v,voucher:biaya.v==="voucher"?vchNilai():"",total:biaya.nominal,peserta,bukti:await kompres(file)});
+    const r=await api({action:"daftar",kode:K.id,kelas:K.nama,tanggal:K.tanggal,pembiayaan:biaya.v,voucher:biaya.v==="voucher"?vchNilai():"",total:biaya.nominal,peserta,persetujuan:pakaiPHQ(K)?{setuju:!!($("#konsenSetuju")||{}).checked,izinPeserta:!!($("#konsenIzin")||{}).checked,versi:CONSENT_VERSI}:null,bukti:await kompres(file)});
     if(!r.ok)throw new Error(r.error||"Gagal menyimpan");
     const msg=`Halo Psychosoul, saya sudah mendaftar kelas "${K.nama}" (${tgl(K.tanggal)}) atas nama ${peserta.map(p=>p.nama).join(", ")}. Total ${rp(biaya.nominal)}. ID pendaftaran: ${r.id}.`;
     $("#waLink").href=`https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(msg)}`;
@@ -868,7 +895,7 @@ function konsDokumen(){
     <p style="font-size:9pt;color:#555">Skor 3 atau lebih pada subskala Cemas atau Depresi menandakan perlu penelusuran lebih lanjut. PHQ-4 adalah skrining, bukan diagnosis.</p>`}
   const jc=VCH_KELAS.includes(konsKode),adaDok=String(r["Dokumen SMART Goal"]||"").trim()!=="";
   const tgl=new Intl.DateTimeFormat("id-ID",{timeZone:"Asia/Jakarta",dateStyle:"full",timeStyle:"short"}).format(new Date());
-  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>DEMO · Info Class With Psychosoul</title>
+  const html=`<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><head><meta charset="utf-8"><title>Catatan Konseling</title>
   <style>body{font-family:Calibri,Arial,sans-serif;font-size:11pt}h1{font-size:16pt;margin:0}h3{font-size:12pt;margin:14px 0 4px}</style></head><body>
   <h1>Catatan Konseling</h1><p style="margin:0;color:#555">Layanan Psikologi &amp; Hipnoterapi Psychosoul</p><hr>
   <table style="border-collapse:collapse;width:100%">${row("Nama",esc(r["Nama"]))}${row("ID daftar",esc(r["ID Daftar"]))}${row("Kelas",esc(r["Kelas"]))}${jc?row("Tema curhat",esc($("#konsTema").value)):""}${row("Status konseling",esc($("#konsStatus").value||"Belum ditentukan"))}${row("Nama konselor",esc($("#konsNama").value))}${jc?row("Dokumen SMART Goal",adaDok?"Tersimpan di sistem":"Belum ada"):""}</table>

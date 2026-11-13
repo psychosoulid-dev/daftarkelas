@@ -20,7 +20,7 @@ const HEAD = ["Waktu","ID Daftar","Kode Kelas","Kelas","Pembiayaan","Total","Pes
   "Jenis Kelamin","No WA","Alamat","Pekerjaan","Jurusan","Semester","Tempat Pendidikan",
   "Lama Praktik (thn)","Tempat Kerja","Bukti Bayar","Status Bayar",
   "PHQ-4 Jawaban","PHQ-4 Cemas","PHQ-4 Depresi","PHQ-4 Total",
-  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher","Dokumen SMART Goal","Tema Curhat"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
+  "Hasil Konseling","Nama Konselor","Status Konseling","No Urut Voucher","Voucher Diserahkan","Kode Voucher","Dokumen SMART Goal","Tema Curhat","Persetujuan","Waktu Persetujuan","Versi Persetujuan"];   // 3 kolom terakhir diisi admin lewat halaman admin; 4 kolom PHQ-4 hanya terisi untuk kelas yang memakai skrining
 
 const out = o => ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
 const safe = v => (typeof v === "string" && /^[=+\-@]/.test(v)) ? "'" + v : (v == null ? "" : v); // cegah formula injection
@@ -249,7 +249,13 @@ function daftar(d) {
       safe(p.nama), safe(p.usia), safe(p.jk), safe(p.wa), safe(p.alamat), safe(p.kerja || "-"),
       safe(p.jurusan || ""), safe(p.semester || ""), safe(p.tempat_pendidikan || ""),
       safe(p.lama_praktik || ""), safe(p.tempat_kerja || ""), link, "Menunggu verifikasi"].concat(phq(p)));
-    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); r[HEAD.indexOf("Kode Voucher")] = kv; });   // lengkapi kolom admin (konseling, voucher) yang kosong
+    const pj = d.persetujuan || {};
+    rows.forEach(r => { while (r.length < HEAD.length) r.push(""); r[HEAD.indexOf("Kode Voucher")] = kv;
+      if (pj.setuju) {   // bukti persetujuan (informed consent), hanya kelas yang memakainya
+        r[HEAD.indexOf("Persetujuan")] = "Setuju" + (pj.izinPeserta ? " + izin peserta lain" : "");
+        r[HEAD.indexOf("Waktu Persetujuan")] = Utilities.formatDate(new Date(), "Asia/Jakarta", "dd/MM/yyyy HH:mm");
+        r[HEAD.indexOf("Versi Persetujuan")] = safe(pj.versi);
+      } });   // lengkapi kolom admin (konseling, voucher) yang kosong
     sh.getRange(start, 11, rows.length, 1).setNumberFormat("@");   // No WA tetap teks (0 depan aman)
     sh.getRange(start, 1, rows.length, HEAD.length).setValues(rows);
     return { ok: true, id: id };
