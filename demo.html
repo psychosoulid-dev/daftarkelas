@@ -74,7 +74,7 @@ form{display:flex;flex-direction:column;max-height:calc(100dvh - 24px)}
 .m-head{padding:18px 22px 12px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:12px}
 .m-head h2{margin:0;font-size:1.2rem}
 .x{border:0;background:none;font-size:1.6rem;line-height:1;cursor:pointer;color:var(--muted)}
-.consent{background:#f3f8f5;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:.9rem}.consent h3{margin:0 0 6px;font-size:1rem}.consent ul{margin:0 0 8px;padding-left:18px}.consent li{margin:3px 0}.consent .ck{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-weight:500}.consent .ck input{margin-top:3px;width:20px;height:20px;flex:none}
+.consent{background:#f3f8f5;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:.9rem}.consent h3{margin:0 0 6px;font-size:1rem}.consent p{margin:0 0 8px}.consent ul{margin:0 0 8px;padding-left:18px}.consent li{margin:3px 0}.consent .ck{display:flex;gap:8px;align-items:flex-start;margin-top:8px;font-weight:500}.consent .ck input{margin-top:3px;width:20px;height:20px;flex:none}
 .steps{display:flex;gap:6px;padding:12px 22px 0;font-size:.85rem;color:var(--muted)}
 .steps div{flex:1;border-top:3px solid var(--line);padding-top:5px}
 .steps .on{border-color:var(--teal);color:var(--teal);font-weight:600}
@@ -484,16 +484,20 @@ function phqHTML(n){
   <div class="note">Selama <b>2 minggu terakhir</b>, seberapa sering kamu terganggu oleh masalah-masalah berikut?</div>
   ${PHQ_ITEMS.map((t,q)=>`<div class="q" role="group" aria-label="${esc(t)}"><span class="lb">${q+1}. ${esc(t)}</span><div class="opts">${PHQ_OPSI.map((o,v)=>`<label><input type="radio" name="${n}phq${q+1}" value="${v}" ${v===0?"required":""}> ${o}</label>`).join("")}</div></div>`).join("")}
   <div class="note" style="padding:8px 0">Skrining ini bukan diagnosis. Jika kamu merasa sangat tertekan, segera hubungi admin atau orang terdekat.</div></div>`}
-const CONSENT_VERSI="v1-2026-11-13",CONSENT_SIMPAN="12 bulan";
+const CONSENT_VERSI="v2-2026-11-13";
 function konsenHTML(){
   return `<div class="consent"><h3>Persetujuan &amp; skrining</h3>
+  <p>Layanan Psikologi Psychosoul mengumpulkan data yang kamu isi di formulir ini: nama, usia, jenis kelamin, no. WhatsApp, alamat, pekerjaan atau data pendidikan, dan bukti pembayaran.</p>
+  <p><b>Dipakai untuk:</b> memproses pendaftaran dan verifikasi pembayaran, menghubungimu lewat WhatsApp (informasi kelas dan antrian), pelaksanaan kegiatan, serta penerbitan voucher.</p>
+  <p>Akses data hanya dilakukan oleh tim Psychosoul yang bertugas. Data disimpan di layanan Google (Sheets dan Drive) milik Psychosoul dan tidak dibagikan ke pihak lain tanpa persetujuan, kecuali diwajibkan hukum.</p>
+  <p>Berhak menanyakan, memperbaiki, meminta penghapusan datamu, atau menarik persetujuan lewat WhatsApp Minsoul Class (${esc(WA_NUMBER)}) pada jam operasional.</p>
+  <p>Kamu akan mengisi <b>skrining PHQ-4</b> singkat tentang kecemasan dan suasana hati. <b>Hasilnya bukan diagnosis</b>, dan sesi ini <b>bukan terapi</b>.</p>
   <ul>
-   <li><b>Data yang dipakai:</b> data diri, bukti pembayaran, jawaban skrining, dan catatan sesi curhat, untuk pendaftaran, informasi antrian lewat WA, dan sesi.</li>
-   <li><b>Siapa yang melihat:</b> hanya konselor dan admin Psychosoul. Disimpan di Google (Sheets/Drive) selama ${CONSENT_SIMPAN} setelah kegiatan, tidak dibagikan tanpa izinmu kecuali diwajibkan hukum.</li>
-   <li><b>PHQ-4</b> adalah skrining singkat kecemasan dan suasana hati. <b>Bukan diagnosis</b>, dan sesi ini <b>bukan terapi</b>. Mengisinya sukarela.</li>
-   <li>Bila hasilmu perlu perhatian lebih, tim akan menghubungimu lewat WA untuk menyarankan tindak lanjut.</li>
+   <li>Jawaban skrining, tema curhat, catatan sesi, dan dokumen SMART Goal adalah data sensitif. Hanya konselor dan admin yang bertugas yang melihatnya.</li>
+   <li>Mengisi PHQ-4 sukarela.</li>
+   <li>Bila hasilmu menunjukkan perlu perhatian lebih, tim akan menghubungimu lewat WhatsApp untuk menyarankan tindak lanjut.</li>
    <li>Isi sesi dijaga kerahasiaannya, kecuali ada risiko membahayakan dirimu atau orang lain, atau diwajibkan hukum.</li>
-   <li><b>Hakmu:</b> bertanya, memperbaiki, menghapus data, atau menarik persetujuan lewat WA ${esc(WA_NUMBER)}.</li>
+   <li>Bila kamu sedang dalam kondisi darurat, segera hubungi layanan darurat terdekat atau orang terdekat.</li>
   </ul>
   <label class="ck"><input type="checkbox" id="konsenSetuju" required><span>Saya sudah membaca dan <b>setuju</b> data saya diproses serta mengisi skrining PHQ-4.</span></label>
   ${jumlah>1?`<label class="ck"><input type="checkbox" id="konsenIzin" required><span>Saya sudah mendapat izin dari peserta lain yang saya daftarkan.</span></label>`:""}
