@@ -225,9 +225,14 @@ function buatId(sh, kode) {
 // Jam buka pendaftaran per kode kelas (WIB). Sebelum waktu ini, server menolak pendaftaran. Kosongkan/hapus entri bila tidak dipakai.
 const BUKA_JAM = { "C11.3.26.03.1": "2026-11-14T13:00:00+07:00", "C11.3.26.03.2": "2026-11-15T13:00:00+07:00" };
 
+// Kelas yang wajib persetujuan + skrining PHQ-4 (divalidasi juga di server)
+const KELAS_PERSETUJUAN = ["C11.3.26.03.1"];
+
 function daftar(d) {
   const kode = String(d.kode || "").replace(/[\[\]*?:\/\\]/g, "_").slice(0, 90);
   if (!kode || !d.peserta || !d.peserta.length) throw new Error("Data pendaftaran tidak lengkap");
+  if (!/^C\d+(\.\d+)+$/.test(kode)) throw new Error("Kode kelas tidak valid");   // cegah pembuatan tab sembarang
+  if (KELAS_PERSETUJUAN.indexOf(kode) >= 0 && !(d.persetujuan && d.persetujuan.setuju)) throw new Error("Persetujuan data dan skrining wajib disetujui.");
   if (daftarTutup().indexOf(kode) >= 0) throw new Error("Pendaftaran kelas ini sudah ditutup.");
   if (BUKA_JAM[kode] && Date.now() < Date.parse(BUKA_JAM[kode])) throw new Error("Pendaftaran belum dibuka. Silakan coba lagi sesuai jadwal pembukaan.");
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
